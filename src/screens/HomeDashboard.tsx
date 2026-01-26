@@ -6,17 +6,23 @@ import { COLORS } from '../theme/colors';
 import SensorCard from '../components/SensorCard';
 import InfoRow from '../components/InfoRow';
 
-const HomeDashboard: React.FC = () => {
+const HomeDashboard: React.FC<{ navigation: any }> = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity style={styles.headerIcon}>
+          <TouchableOpacity 
+            style={styles.headerIcon}
+            onPress={() => navigation.navigate('DeviceManagement')}
+          >
             <MIcon name="grid-view" size={22} color={COLORS.textGray} />
           </TouchableOpacity>
           <Text style={styles.title}>KrushiSetu</Text>
-          <TouchableOpacity style={styles.headerIcon}>
+          <TouchableOpacity 
+            style={styles.headerIcon}
+            onPress={() => navigation.navigate('Settings')}
+          >
             <MIcon name="settings" size={22} color={COLORS.textGray} />
           </TouchableOpacity>
         </View>
@@ -77,12 +83,18 @@ const HomeDashboard: React.FC = () => {
         <TouchableOpacity style={styles.navItem}>
           <MIcon name="home" size={26} color={COLORS.primary} />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
+        <TouchableOpacity 
+          style={styles.navItem}
+          onPress={() => navigation.navigate('SensorHistory')}
+        >
           <MIcon name="bar-chart" size={26} color={COLORS.textLight} />
         </TouchableOpacity>
         
         <View style={styles.fabContainer}>
-          <TouchableOpacity style={styles.fab}>
+          <TouchableOpacity 
+            style={styles.fab}
+            onPress={() => navigation.navigate('DeviceManagement')}
+          >
             <MIcon name="add" size={30} color="#fff" />
           </TouchableOpacity>
         </View>
