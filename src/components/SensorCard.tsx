@@ -10,13 +10,90 @@ interface Props {
 }
 
 const SensorCard: React.FC<Props> = ({ icon, label, value }) => {
+  // Different color themes based on sensor type
+  const getColorTheme = () => {
+    switch (label.toLowerCase()) {
+      case 'moisture':
+        return {
+          borderColor: '#1976D2',
+          iconBg: '#E3F2FD',
+          iconColor: '#1976D2',
+          valueColor: '#0D47A1',
+          labelColor: '#1565C0'
+        };
+      case 'temperature':
+        return {
+          borderColor: '#F57C00',
+          iconBg: '#FFF3E0',
+          iconColor: '#F57C00',
+          valueColor: '#E65100',
+          labelColor: '#EF6C00'
+        };
+      case 'humidity':
+        return {
+          borderColor: '#00796B',
+          iconBg: '#E0F2F1',
+          iconColor: '#00796B',
+          valueColor: '#004D40',
+          labelColor: '#00695C'
+        };
+      case 'soil ph':
+        return {
+          borderColor: '#7B1FA2',
+          iconBg: '#F3E5F5',
+          iconColor: '#7B1FA2',
+          valueColor: '#4A148C',
+          labelColor: '#6A1B9A'
+        };
+      case 'nitrogen (n)':
+        return {
+          borderColor: '#388E3C',
+          iconBg: '#E8F5E8',
+          iconColor: '#388E3C',
+          valueColor: '#1B5E20',
+          labelColor: '#2E7D32'
+        };
+      case 'phosphorus (p)':
+        return {
+          borderColor: '#D32F2F',
+          iconBg: '#FFEBEE',
+          iconColor: '#D32F2F',
+          valueColor: '#B71C1C',
+          labelColor: '#C62828'
+        };
+      case 'potassium (k)':
+        return {
+          borderColor: '#FBC02D',
+          iconBg: '#FFFDE7',
+          iconColor: '#F9A825',
+          valueColor: '#F57F17',
+          labelColor: '#F57F17'
+        };
+      default:
+        return {
+          borderColor: COLORS.primary,
+          iconBg: '#F0F7F4',
+          iconColor: COLORS.primary,
+          valueColor: COLORS.textDark,
+          labelColor: COLORS.textGray
+        };
+    }
+  };
+
+  const theme = getColorTheme();
+
   return (
-    <View style={styles.card}>
-      <View style={styles.iconContainer}>
-        <Icon name={icon} size={24} color={COLORS.primary} />
+    <View style={[styles.card, { borderColor: theme.borderColor }]}>
+      {/* ICON */}
+      <View style={[styles.iconBg, { backgroundColor: theme.iconBg }]}>
+        <Icon name={icon} size={26} color={theme.iconColor} />
       </View>
-      <Text style={styles.label}>{label}</Text>
-      <Text style={styles.value}>{value}</Text>
+
+      {/* LABEL */}
+      <Text style={[styles.label, { color: theme.labelColor }]}>{label}</Text>
+
+      {/* VALUE */}
+      <Text style={[styles.value, { color: theme.valueColor }]}>{value}</Text>
     </View>
   );
 };
@@ -27,37 +104,34 @@ const styles = StyleSheet.create({
   card: {
     width: '48%',
     backgroundColor: COLORS.card,
-    borderRadius: 24,
-    padding: 20,
-    marginBottom: 16,
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 2,
+    elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    elevation: 3,
-    borderWidth: 1,
-    borderColor: '#F1F3F5',
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
   },
-  iconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: '#F0F7F4',
+
+  iconBg: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
   },
-  value: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: COLORS.textDark,
-    letterSpacing: -0.5,
-  },
+
   label: {
     fontSize: 13,
-    color: COLORS.textLight,
-    marginBottom: 4,
     fontWeight: '600',
-    textTransform: 'capitalize',
+  },
+
+  value: {
+    fontSize: 20,
+    fontWeight: '800',
+    marginTop: 4,
   },
 });

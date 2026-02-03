@@ -143,7 +143,7 @@ const SensorHistory = ({ navigation }: any) => {
         {/* Device Selector */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Icon name="devices" size={20} color={COLORS.textGray} />
+            <Icon name="device-hub" size={20} color={COLORS.textGray} />
             <Text style={styles.cardLabel}>Connected Gateway</Text>
           </View>
           <TouchableOpacity style={styles.selector}>

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { COLORS } from '../theme/colors';
 
 const SensorDetails = ({ route, navigation }: any) => {
   const { sensorData } = route.params;
@@ -73,7 +74,7 @@ const SensorDetails = ({ route, navigation }: any) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F1F8E9',
+    backgroundColor: COLORS.background,
   },
   header: {
     flexDirection: 'row',

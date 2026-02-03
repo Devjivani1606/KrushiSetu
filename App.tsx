@@ -11,6 +11,10 @@ import SensorDetails from './src/screens/SensorDetails';
 import SettingsScreen from './src/screens/SettingsScreen';
 import SensorHistory from './src/screens/SensorHistory';
 import DeviceManagement from './src/screens/DeviceManagement';
+import LiveWeatherDashboard from './src/screens/LiveWeatherDashboard';
+import CropPredictionScreen from './src/screens/CropPredictionScreen';
+import Login from './src/screens/Login';
+import CreateAccount from './src/screens/CreateAccount';
 
 const Stack = createStackNavigator();
 
@@ -20,15 +24,19 @@ const App = () => {
       <SafeAreaProvider>
         <NavigationContainer>
           <Stack.Navigator
-            initialRouteName="Splash"
+            initialRouteName="Login"
             screenOptions={{ headerShown: false }}
           >
             <Stack.Screen name="Splash" component={SplashScreen} />
+            <Stack.Screen name="Login" component={Login} />
+            <Stack.Screen name="CreateAccount" component={CreateAccount} />
             <Stack.Screen name="Home" component={HomeDashboard} />
             <Stack.Screen name="SensorDetails" component={SensorDetails} />
             <Stack.Screen name="Settings" component={SettingsScreen} />
             <Stack.Screen name="SensorHistory" component={SensorHistory} />
             <Stack.Screen name="DeviceManagement" component={DeviceManagement} />
+            <Stack.Screen name="LiveWeather" component={LiveWeatherDashboard} />
+            <Stack.Screen name="CropPrediction" component={CropPredictionScreen} />
           </Stack.Navigator>
         </NavigationContainer>
       </SafeAreaProvider>

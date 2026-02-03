@@ -1,6 +1,11 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, SafeAreaView } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import {
+  View,
+  Text,
+  StyleSheet,
+  SafeAreaView,
+  Image,
+} from 'react-native';
 import { COLORS } from '../theme/colors';
 
 const SplashScreen = ({ navigation }: any) => {
@@ -15,10 +20,17 @@ const SplashScreen = ({ navigation }: any) => {
     <SafeAreaView style={styles.container}>
       <View style={styles.logoContainer}>
         <View style={styles.iconBg}>
-          <Icon name="leaf" size={60} color={COLORS.primary} />
+          <Image
+            source={require('../../assets/images/krushusetu.jpg')}
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
         </View>
+
         <Text style={styles.appName}>KrushiSetu</Text>
-        <Text style={styles.tagline}>Smart Soil Monitoring for Smart Farming</Text>
+        <Text style={styles.tagline}>
+          Smart Soil Monitoring for Smart Farming
+        </Text>
       </View>
 
       <View style={styles.footer}>
@@ -32,6 +44,7 @@ const SplashScreen = ({ navigation }: any) => {
     </SafeAreaView>
   );
 };
+
 
 const styles = StyleSheet.create({
   container: {
@@ -100,6 +113,22 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
     marginTop: 10,
   },
+ logoImage: {
+  width: 140,
+  height: 140,
+  borderRadius: 60,   // 👈 half of width/height = perfect circle
+  backgroundColor: '#fff',
+  alignItems: 'center',
+  justifyContent: 'center',
+  elevation: 5,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.1,
+  shadowRadius: 10,
+  marginBottom: 24,
+},
+
+
 });
 
 export default SplashScreen;

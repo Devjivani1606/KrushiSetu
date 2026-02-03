@@ -3,23 +3,27 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import MIcon from 'react-native-vector-icons/MaterialIcons';
 import { COLORS } from '../theme/colors';
+
 import SensorCard from '../components/SensorCard';
 import InfoRow from '../components/InfoRow';
+import DashboardActionCard from '../components/DashboardActionCard';
+import { ICONS } from '../constants/icons';
+import CropPredictionScreen from './CropPredictionScreen';
 
 const HomeDashboard: React.FC<{ navigation: any }> = ({ navigation }) => {
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity 
-            style={styles.headerIcon}
-            onPress={() => navigation.navigate('DeviceManagement')}
-          >
+          <TouchableOpacity style={styles.headerIcon}>
             <MIcon name="grid-view" size={22} color={COLORS.textGray} />
           </TouchableOpacity>
+
           <Text style={styles.title}>KrushiSetu</Text>
-          <TouchableOpacity 
+
+          <TouchableOpacity
             style={styles.headerIcon}
             onPress={() => navigation.navigate('Settings')}
           >
@@ -30,77 +34,74 @@ const HomeDashboard: React.FC<{ navigation: any }> = ({ navigation }) => {
         {/* Connection Card */}
         <View style={styles.connectionCard}>
           <View style={styles.connIconBg}>
-            <MIcon name="rss-feed" size={20} color={COLORS.primary} />
+            <Icon name={ICONS.CONNECTION} size={20} color={COLORS.primary} />
           </View>
           <View style={{ flex: 1, marginLeft: 12 }}>
             <Text style={styles.connTitle}>Sensors Connected</Text>
             <Text style={styles.connSub}>Gateway: KS-GW-Alpha</Text>
           </View>
-          <View style={styles.activeBadge}>
-            <View style={styles.dot} />
-            <Text style={styles.activeText}>Active</Text>
-          </View>
         </View>
 
         {/* Soil Parameters */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Soil Parameters</Text>
-          <Text style={styles.updateText}>Updated 1m ago</Text>
-        </View>
-
+        <Text style={styles.sectionTitle}>Soil Parameters</Text>
         <View style={styles.grid}>
-          <SensorCard icon="water-percent" label="Moisture" value="42%" />
-          <SensorCard icon="thermometer" label="Temperature" value="28.5°C" />
-          <SensorCard icon="water-outline" label="Humidity" value="65%" />
-          <SensorCard icon="flask-outline" label="Soil pH" value="6.8" />
+          <SensorCard icon={ICONS.MOISTURE} label="Moisture" value="42%" />
+          <SensorCard icon={ICONS.TEMPERATURE} label="Temperature" value="28.5°C" />
+          <SensorCard icon={ICONS.HUMIDITY} label="Humidity" value="65%" />
+          <SensorCard icon={ICONS.PH} label="Soil pH" value="6.8" />
         </View>
 
-        {/* NPK Values */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>NPK Values</Text>
-          <Text style={styles.updateText}>Updated 5m ago</Text>
-        </View>
-
+        {/* NPK */}
+        <Text style={styles.sectionTitle}>NPK Values</Text>
         <View style={styles.grid}>
-          <SensorCard icon="nitrogen" label="Nitrogen (N)" value="45 mg/kg" />
-          <SensorCard icon="flask" label="Phosphorus (P)" value="23 mg/kg" />
-          <SensorCard icon="leaf" label="Potassium (K)" value="180 mg/kg" />
+          <SensorCard icon={ICONS.NITROGEN} label="Nitrogen (N)" value="45 mg/kg" />
+          <SensorCard icon={ICONS.PHOSPHORUS} label="Phosphorus (P)" value="23 mg/kg" />
+          <SensorCard icon={ICONS.POTASSIUM} label="Potassium (K)" value="180 mg/kg" />
         </View>
 
         {/* Device Info */}
         <Text style={styles.sectionTitle}>Device Information</Text>
         <View style={styles.deviceCard}>
-          <InfoRow icon="sync" label="Last Synced" value="2 mins ago" />
-          <InfoRow icon="battery-80" label="Battery" value="85%" />
-          <InfoRow icon="cpu-64-bit" label="Device ID" value="KS-IOT-9921" />
+          <InfoRow icon={ICONS.SYNC} label="Last Synced" value="2 mins ago" />
+          <InfoRow icon={ICONS.BATTERY} label="Battery" value="85%" />
+          <InfoRow icon={ICONS.CPU} label="Device ID" value="KS-IOT-9921" />
         </View>
-        
-        <View style={{ height: 100 }} />
+
+        <View style={{ height: 120 }} />
       </ScrollView>
 
       {/* Bottom Navigation */}
       <View style={styles.bottomNav}>
-        <TouchableOpacity style={styles.navItem}>
-          <MIcon name="home" size={26} color={COLORS.primary} />
+        {/* Devices Manage */}
+        <TouchableOpacity 
+          style={styles.navItem}
+          onPress={() => navigation.navigate('DeviceManagement')}
+        >
+          <MIcon name="device-hub" size={26} color={COLORS.primary} />
         </TouchableOpacity>
+        
+        {/* Sensor History */}
         <TouchableOpacity 
           style={styles.navItem}
           onPress={() => navigation.navigate('SensorHistory')}
         >
-          <MIcon name="bar-chart" size={26} color={COLORS.textLight} />
+          <MIcon name="bar-chart" size={26} color={COLORS.primary} />
         </TouchableOpacity>
-        
-        <View style={styles.fabContainer}>
-          <TouchableOpacity 
-            style={styles.fab}
-            onPress={() => navigation.navigate('DeviceManagement')}
-          >
-            <MIcon name="add" size={30} color="#fff" />
-          </TouchableOpacity>
-        </View>
 
-        <TouchableOpacity style={styles.navItem}>
-          <MIcon name="notifications" size={26} color={COLORS.textLight} />
+        {/* Live Weather */}
+        <TouchableOpacity 
+          style={styles.navItem}
+          onPress={() => navigation.navigate('LiveWeather')}
+        >
+          <MIcon name="wb-sunny" size={26} color={COLORS.primary} />
+        </TouchableOpacity>
+
+        {/* Existing navigation items */}
+        <TouchableOpacity 
+          style={styles.navItem}
+          onPress={() => navigation.navigate('CropPrediction')}
+        >
+          <MIcon name="eco" size={26} color={COLORS.primary} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem}>
           <MIcon name="person" size={26} color={COLORS.textLight} />
@@ -110,7 +111,6 @@ const HomeDashboard: React.FC<{ navigation: any }> = ({ navigation }) => {
   );
 };
 
-// ...existing code...
 export default HomeDashboard;
 
 const styles = StyleSheet.create({
@@ -124,8 +124,8 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 24,
   },
   headerIcon: {
@@ -133,16 +133,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 12,
     elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
   },
   title: {
     fontSize: 18,
     fontWeight: '800',
     color: COLORS.textDark,
-    letterSpacing: 0.5,
   },
   connectionCard: {
     backgroundColor: COLORS.card,
@@ -152,10 +147,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 24,
     elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
   },
   connIconBg: {
     width: 44,
@@ -173,43 +164,12 @@ const styles = StyleSheet.create({
   connSub: {
     fontSize: 12,
     color: COLORS.textLight,
-    marginTop: 2,
-  },
-  activeBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#E7F5EF',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: COLORS.success,
-    marginRight: 6,
-  },
-  activeText: {
-    color: COLORS.success,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 17,
     fontWeight: '800',
+    marginBottom: 12,
     color: COLORS.textDark,
-  },
-  updateText: {
-    fontSize: 12,
-    color: COLORS.textLight,
-    fontWeight: '500',
   },
   grid: {
     flexDirection: 'row',
@@ -220,14 +180,8 @@ const styles = StyleSheet.create({
   deviceCard: {
     backgroundColor: COLORS.card,
     borderRadius: 20,
-    padding: 8,
-    paddingHorizontal: 16,
-    marginTop: 12,
+    padding: 16,
     elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
   },
   bottomNav: {
     position: 'absolute',
@@ -249,22 +203,5 @@ const styles = StyleSheet.create({
   },
   navItem: {
     padding: 10,
-  },
-  fabContainer: {
-    top: -30,
-    elevation: 11,
-  },
-  fab: {
-    backgroundColor: COLORS.primary,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
   },
 });
