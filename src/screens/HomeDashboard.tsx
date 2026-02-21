@@ -11,7 +11,8 @@ import { ICONS } from '../constants/icons';
 import CropPredictionScreen from './CropPredictionScreen';
 import { fetchCurrentSoilData, SoilData } from '../services/api';
 
-const HomeDashboard: React.FC<{ navigation: any }> = ({ navigation }) => {
+const HomeDashboard: React.FC<{ navigation: any; route: any }> = ({ navigation, route }) => {
+  const user = route.params?.user;
   const [soilData, setSoilData] = useState<SoilData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -51,7 +52,7 @@ const HomeDashboard: React.FC<{ navigation: any }> = ({ navigation }) => {
 
           <TouchableOpacity
             style={styles.headerIcon}
-            onPress={() => navigation.navigate('Settings')}
+            onPress={() => navigation.navigate('Settings', { user })}
           >
             <MIcon name="settings" size={22} color={COLORS.textGray} />
           </TouchableOpacity>
@@ -116,15 +117,15 @@ const HomeDashboard: React.FC<{ navigation: any }> = ({ navigation }) => {
       {/* Bottom Navigation */}
       <View style={styles.bottomNav}>
         {/* Devices Manage */}
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.navItem}
           onPress={() => navigation.navigate('DeviceManagement')}
         >
           <MIcon name="device-hub" size={26} color={COLORS.primary} />
         </TouchableOpacity>
-        
+
         {/* Sensor History */}
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.navItem}
           onPress={() => navigation.navigate('SensorHistory')}
         >
@@ -132,7 +133,7 @@ const HomeDashboard: React.FC<{ navigation: any }> = ({ navigation }) => {
         </TouchableOpacity>
 
         {/* Live Weather */}
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.navItem}
           onPress={() => navigation.navigate('LiveWeather')}
         >
@@ -140,7 +141,7 @@ const HomeDashboard: React.FC<{ navigation: any }> = ({ navigation }) => {
         </TouchableOpacity>
 
         {/* Existing navigation items */}
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.navItem}
           onPress={() => navigation.navigate('CropPrediction')}
         >

@@ -1,12 +1,29 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import MIcon from 'react-native-vector-icons/MaterialIcons';
 import { COLORS } from '../theme/colors';
 
-const SettingsScreen = ({ navigation }: any) => {
+const SettingsScreen = ({ navigation, route }: any) => {
   const [alertNotifications, setAlertNotifications] = useState(true);
+  const user = route.params?.user;
+
+  const handleLogout = () => {
+    Alert.alert('Logout', 'Are you sure you want to logout?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Logout',
+        style: 'destructive',
+        onPress: () => {
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'Login' }],
+          });
+        },
+      },
+    ]);
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -30,7 +47,7 @@ const SettingsScreen = ({ navigation }: any) => {
             </View>
             <View style={styles.settingContent}>
               <Text style={styles.settingTitle}>Name</Text>
-              <Text style={styles.settingSubtitle}>Rajesh Kumar</Text>
+              <Text style={styles.settingSubtitle}>{user?.full_name || 'Not available'}</Text>
             </View>
             <MIcon name="chevron-right" size={24} color={COLORS.textLight} />
           </TouchableOpacity>
@@ -43,14 +60,14 @@ const SettingsScreen = ({ navigation }: any) => {
             </View>
             <View style={styles.settingContent}>
               <Text style={styles.settingTitle}>Email</Text>
-              <Text style={styles.settingSubtitle}>rajesh@krushisetu.com</Text>
+              <Text style={styles.settingSubtitle}>{user?.email || 'Not available'}</Text>
             </View>
             <MIcon name="chevron-right" size={24} color={COLORS.textLight} />
           </TouchableOpacity>
 
           <View style={styles.divider} />
 
-          <TouchableOpacity style={styles.settingRow}>
+          <TouchableOpacity style={styles.settingRow} onPress={handleLogout}>
             <View style={styles.iconContainer}>
               <Icon name="logout" size={20} color="#E74C3C" />
             </View>

@@ -19,8 +19,9 @@ const CreateAccount: React.FC<{ navigation: any }> = ({ navigation }) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
     if (!fullName || !email || !password || !confirmPassword) {
       Alert.alert('Error', 'Please fill all fields');
       return;
@@ -29,8 +30,33 @@ const CreateAccount: React.FC<{ navigation: any }> = ({ navigation }) => {
       Alert.alert('Error', 'Passwords do not match');
       return;
     }
-    Alert.alert('Success', 'Account created successfully!');
-    navigation.navigate('Login');
+
+    setLoading(true);
+    try {
+      const response = await fetch('http://10.232.167.150:5000/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          full_name: fullName.trim(),
+          email: email.trim(),
+          password,
+          confirm_password: confirmPassword,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        Alert.alert('Success', 'Account created successfully!');
+        navigation.navigate('Login');
+      } else {
+        Alert.alert('Signup Failed', data.error || 'Something went wrong');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Cannot connect to server. Make sure the backend is running.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

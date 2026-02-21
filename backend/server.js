@@ -4,6 +4,7 @@ require('dotenv').config();
 
 const soilRoutes = require('./routes/soilRoutes');
 const streamRoutes = require('./routes/streamRoutes');
+const authRoutes = require('./routes/authRoutes');
 const pool = require('./db');
 
 const app = express();
@@ -22,6 +23,7 @@ app.use((req, res, next) => {
 // Routes
 app.use('/api', soilRoutes);
 app.use('/api', streamRoutes);
+app.use('/api/auth', authRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
