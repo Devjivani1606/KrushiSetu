@@ -5,10 +5,10 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   StatusBar,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { COLORS } from '../theme/colors';
 
@@ -31,7 +31,7 @@ const Login: React.FC<{ navigation: any }> = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
-      
+
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Icon name="arrow-left" size={24} color={COLORS.textDark} />
@@ -73,10 +73,10 @@ const Login: React.FC<{ navigation: any }> = ({ navigation }) => {
                 secureTextEntry={!showPassword}
               />
               <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                <Icon 
-                  name={showPassword ? "eye-off" : "eye"} 
-                  size={20} 
-                  color={COLORS.textLight} 
+                <Icon
+                  name={showPassword ? "eye-off" : "eye"}
+                  size={20}
+                  color={COLORS.textLight}
                 />
               </TouchableOpacity>
             </View>

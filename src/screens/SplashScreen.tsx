@@ -3,9 +3,9 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   Image,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS } from '../theme/colors';
 
 const SplashScreen = ({ navigation }: any) => {
@@ -113,20 +113,20 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
     marginTop: 10,
   },
- logoImage: {
-  width: 140,
-  height: 140,
-  borderRadius: 60,   // 👈 half of width/height = perfect circle
-  backgroundColor: '#fff',
-  alignItems: 'center',
-  justifyContent: 'center',
-  elevation: 5,
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: 0.1,
-  shadowRadius: 10,
-  marginBottom: 24,
-},
+  logoImage: {
+    width: 140,
+    height: 140,
+    borderRadius: 60,   // 👈 half of width/height = perfect circle
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    marginBottom: 24,
+  },
 
 
 });

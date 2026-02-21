@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import MIcon from 'react-native-vector-icons/MaterialIcons';
 import { COLORS } from '../theme/colors';
@@ -21,7 +22,7 @@ const SettingsScreen = ({ navigation }: any) => {
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* ACCOUNT Section */}
         <Text style={styles.sectionLabel}>ACCOUNT</Text>
-        
+
         <View style={styles.card}>
           <TouchableOpacity style={styles.settingRow}>
             <View style={styles.iconContainer}>
@@ -61,7 +62,7 @@ const SettingsScreen = ({ navigation }: any) => {
 
         {/* APP PREFERENCES Section */}
         <Text style={styles.sectionLabel}>APP PREFERENCES</Text>
-        
+
         <View style={styles.card}>
           <TouchableOpacity style={styles.settingRow}>
             <View style={styles.iconContainer}>
@@ -98,7 +99,7 @@ const SettingsScreen = ({ navigation }: any) => {
 
         {/* ABOUT Section */}
         <Text style={styles.sectionLabel}>ABOUT</Text>
-        
+
         <View style={styles.card}>
           <TouchableOpacity style={styles.settingRow}>
             <View style={styles.iconContainer}>

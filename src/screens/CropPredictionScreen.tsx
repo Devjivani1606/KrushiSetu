@@ -5,10 +5,10 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   StatusBar,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import MIcon from 'react-native-vector-icons/MaterialIcons';
 import { COLORS } from '../theme/colors';
@@ -49,7 +49,7 @@ const CropPredictionScreen: React.FC<{ navigation: any }> = ({ navigation }) => 
 
   const handlePredictCrop = () => {
     setIsPredicting(true);
-    
+
     setTimeout(() => {
       setRecommendedCrop({
         name: 'Basmati Rice',
@@ -65,7 +65,7 @@ const CropPredictionScreen: React.FC<{ navigation: any }> = ({ navigation }) => 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
-      
+
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Icon name="arrow-left" size={24} color={COLORS.textDark} />
@@ -115,7 +115,7 @@ const CropPredictionScreen: React.FC<{ navigation: any }> = ({ navigation }) => 
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.predictButton, isPredicting && styles.predictButtonDisabled]}
           onPress={handlePredictCrop}
           disabled={isPredicting}
@@ -146,7 +146,7 @@ const CropPredictionScreen: React.FC<{ navigation: any }> = ({ navigation }) => 
                   <Icon name="grass" size={40} color={COLORS.primary} />
                 </View>
               </View>
-              
+
               <View style={styles.cropDetails}>
                 <View style={styles.detailRow}>
                   <Text style={styles.detailLabel}>Expected Yield</Text>
@@ -157,7 +157,7 @@ const CropPredictionScreen: React.FC<{ navigation: any }> = ({ navigation }) => 
                   <Text style={[styles.detailValue, styles.highDemand]}>High</Text>
                 </View>
               </View>
-              
+
               <View style={styles.noteContainer}>
                 <Icon name="lightbulb-outline" size={16} color={COLORS.primary} />
                 <Text style={styles.noteText}>{recommendedCrop.note}</Text>

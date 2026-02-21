@@ -5,9 +5,9 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import MIcon from 'react-native-vector-icons/MaterialIcons';
 import { COLORS } from '../theme/colors';
@@ -94,7 +94,7 @@ const LiveWeatherDashboard: React.FC<{ navigation: any }> = ({ navigation }) => 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
-      
+
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.locationContainer}>
@@ -118,10 +118,10 @@ const LiveWeatherDashboard: React.FC<{ navigation: any }> = ({ navigation }) => 
               <Text style={styles.condition}>{weatherData.condition}</Text>
             </View>
             <View style={styles.weatherIconContainer}>
-              <Icon 
-                name={getWeatherIcon(weatherData.condition)} 
-                size={80} 
-                color="#FFA726" 
+              <Icon
+                name={getWeatherIcon(weatherData.condition)}
+                size={80}
+                color="#FFA726"
               />
             </View>
           </View>
@@ -173,8 +173,8 @@ const LiveWeatherDashboard: React.FC<{ navigation: any }> = ({ navigation }) => 
 
           <View style={styles.forecastContainer}>
             {forecast.map((day, index) => (
-              <View 
-                key={index} 
+              <View
+                key={index}
                 style={[
                   styles.forecastCard,
                   day.isToday && styles.todayCard
@@ -186,10 +186,10 @@ const LiveWeatherDashboard: React.FC<{ navigation: any }> = ({ navigation }) => 
                 ]}>
                   {day.day}
                 </Text>
-                <Icon 
-                  name={day.icon} 
-                  size={32} 
-                  color={day.isToday ? COLORS.primary : COLORS.textGray} 
+                <Icon
+                  name={day.icon}
+                  size={32}
+                  color={day.isToday ? COLORS.primary : COLORS.textGray}
                 />
                 <View style={styles.temperatureRange}>
                   <Text style={styles.maxTemp}>{day.maxTemp}°</Text>

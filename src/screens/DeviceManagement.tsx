@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Switch } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import MIcon from 'react-native-vector-icons/MaterialIcons';
 import { COLORS } from '../theme/colors';
@@ -51,10 +52,10 @@ const DeviceManagement = ({ navigation }: any) => {
       device.battery > 80
         ? 'battery-high'
         : device.battery > 50
-        ? 'battery-medium'
-        : device.battery > 20
-        ? 'battery-low'
-        : 'battery-alert';
+          ? 'battery-medium'
+          : device.battery > 20
+            ? 'battery-low'
+            : 'battery-alert';
     const batteryColor = device.battery > 50 ? COLORS.primary : device.battery > 20 ? '#F39C12' : '#E74C3C';
 
     return (

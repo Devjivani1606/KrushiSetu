@@ -1,32 +1,43 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { COLORS } from '../theme/colors';
+import { fetchCurrentSoilData, SoilData } from '../services/api';
 
 const SensorDetails = ({ route, navigation }: any) => {
-  const { sensorData } = route.params;
-  const [data, setData] = useState(sensorData);
+  const [data, setData] = useState<SoilData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const refreshData = () => {
-    // Simulate refreshing data
-    setData({
-      ...data,
-      moisture: Math.floor(Math.random() * 100),
-      temperature: Math.floor(Math.random() * 40) + 10,
-      humidity: Math.floor(Math.random() * 100),
-      ph: (Math.random() * 4 + 4).toFixed(1),
-      battery: Math.max(0, data.battery - Math.floor(Math.random() * 10)),
-      lastSync: new Date().toLocaleString(),
-    });
+  const refreshData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await fetchCurrentSoilData();
+      setData(response.data);
+    } catch (err) {
+      setError('Failed to load data');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const details = [
-    { label: 'Soil Moisture', value: `${data.moisture}%`, icon: 'opacity' },
+  useEffect(() => {
+    refreshData();
+    const interval = setInterval(refreshData, 2 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const details = data ? [
+    { label: 'Soil Moisture', value: `${data.humidity}%`, icon: 'opacity' },
     { label: 'Temperature', value: `${data.temperature}°C`, icon: 'thermostat' },
     { label: 'Humidity', value: `${data.humidity}%`, icon: 'water-drop' },
-    { label: 'Soil pH', value: data.ph, icon: 'science' },
-    { label: 'Battery Level', value: `${data.battery}%`, icon: 'battery-full' },
-  ];
+    { label: 'Soil pH', value: data.ph.toString(), icon: 'science' },
+    { label: 'Nitrogen (N)', value: `${data.nitrogen} mg/kg`, icon: 'grass' },
+    { label: 'Phosphorus (P)', value: `${data.phosphorus} mg/kg`, icon: 'science' },
+    { label: 'Potassium (K)', value: `${data.potassium} mg/kg`, icon: 'eco' },
+  ] : [];
 
   return (
     <View style={styles.container}>
@@ -40,15 +51,21 @@ const SensorDetails = ({ route, navigation }: any) => {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        {details.map((item, index) => (
-          <View key={index} style={styles.detailCard}>
-            <Icon name={item.icon} size={40} color="#4CAF50" />
-            <View style={styles.detailText}>
-              <Text style={styles.detailLabel}>{item.label}</Text>
-              <Text style={styles.detailValue}>{item.value}</Text>
+        {loading && !data ? (
+          <ActivityIndicator size="large" color="#4CAF50" style={{ marginTop: 50 }} />
+        ) : error ? (
+          <Text style={styles.errorText}>{error}</Text>
+        ) : (
+          details.map((item, index) => (
+            <View key={index} style={styles.detailCard}>
+              <Icon name={item.icon} size={40} color="#4CAF50" />
+              <View style={styles.detailText}>
+                <Text style={styles.detailLabel}>{item.label}</Text>
+                <Text style={styles.detailValue}>{item.value}</Text>
+              </View>
             </View>
-          </View>
-        ))}
+          ))
+        )}
 
         <TouchableOpacity style={styles.refreshButton} onPress={refreshData}>
           <Icon name="refresh" size={24} color="#FFFFFF" />
@@ -144,6 +161,12 @@ const styles = StyleSheet.create({
   navText: {
     fontSize: 12,
     color: '#2E7D32',
+  },
+  errorText: {
+    color: 'red',
+    textAlign: 'center',
+    marginTop: 20,
+    fontSize: 16,
   },
 });
 
