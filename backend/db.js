@@ -1,16 +1,21 @@
 const { Pool } = require('pg');
 require('dotenv').config();
 
+// Validate that DATABASE_URL is set before attempting connection
+if (!process.env.DATABASE_URL) {
+  console.error('❌ FATAL: DATABASE_URL is not defined. Check your .env file.');
+  process.exit(1);
+}
+
+console.log('🔗 Connecting to database...');
+
 const pool = new Pool({
-  user: process.env.DB_USER,
-  host: process.env.DB_HOST,
-  database: process.env.DB_NAME,
-  password: process.env.DB_PASSWORD,
-  port: process.env.DB_PORT,
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false, // Required for Neon cloud PostgreSQL
+  },
 });
 
-// ==========================================
-// Auto-create users table if it doesn't exist
 // ==========================================
 const initializeDatabase = async () => {
   try {
@@ -29,16 +34,14 @@ const initializeDatabase = async () => {
   }
 };
 
-pool.on('connect', () => {
-  console.log('✅ Database connected successfully');
-});
-
-pool.on('error', (err) => {
-  console.error('❌ Unexpected database error:', err);
-  process.exit(-1);
-});
-
-// Run table creation on startup
-initializeDatabase();
+pool.connect()
+  .then((client) => {
+    console.log('✅ Database connected successfully');
+    client.release(); // Always release the client back to the pool
+    initializeDatabase();
+  })
+  .catch((err) => {
+    console.error('❌ Database connection error:', err.message);
+  });
 
 module.exports = pool;
