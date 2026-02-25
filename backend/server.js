@@ -5,6 +5,7 @@ const cors = require('cors');
 const soilRoutes = require('./routes/soilRoutes');
 const streamRoutes = require('./routes/streamRoutes');
 const authRoutes = require('./routes/authRoutes');
+const weatherRoutes = require('./routes/weatherRoutes'); // Weather API routes
 const pool = require('./db');
 
 const app = express();
@@ -24,6 +25,7 @@ app.use((req, res, next) => {
 app.use('/api', soilRoutes);
 app.use('/api', streamRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api', weatherRoutes); // GET /api/weather?city=CityName
 
 // Health check
 app.get('/health', (req, res) => {
