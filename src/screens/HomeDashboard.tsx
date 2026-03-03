@@ -147,6 +147,15 @@ const HomeDashboard: React.FC<{ navigation: any; route: any }> = ({ navigation, 
         >
           <MIcon name="eco" size={26} color={COLORS.primary} />
         </TouchableOpacity>
+        
+        {/* Price History */}
+        <TouchableOpacity
+          style={styles.navItem}
+          onPress={() => navigation.navigate('PriceHistory')}
+        >
+          <MIcon name="trending-up" size={26} color={COLORS.primary} />
+        </TouchableOpacity>
+        
         <TouchableOpacity style={styles.navItem}>
           <MIcon name="person" size={26} color={COLORS.textLight} />
         </TouchableOpacity>

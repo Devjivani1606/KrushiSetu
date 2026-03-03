@@ -15,6 +15,7 @@ import LiveWeatherDashboard from './src/screens/LiveWeatherDashboard';
 import CropPredictionScreen from './src/screens/CropPredictionScreen';
 import Login from './src/screens/Login';
 import CreateAccount from './src/screens/CreateAccount';
+import PriceHistory from './src/screens/PriceHistory';
 
 const Stack = createStackNavigator();
 
@@ -37,6 +38,7 @@ const App = () => {
             <Stack.Screen name="DeviceManagement" component={DeviceManagement} />
             <Stack.Screen name="LiveWeather" component={LiveWeatherDashboard} />
             <Stack.Screen name="CropPrediction" component={CropPredictionScreen} />
+            <Stack.Screen name="PriceHistory" component={PriceHistory} />
           </Stack.Navigator>
         </NavigationContainer>
       </SafeAreaProvider>

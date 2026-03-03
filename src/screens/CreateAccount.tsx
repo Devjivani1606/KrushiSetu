@@ -33,7 +33,7 @@ const CreateAccount: React.FC<{ navigation: any }> = ({ navigation }) => {
 
     setLoading(true);
     try {
-      const response = await fetch('http://10.232.167.150:5000/api/auth/signup', {
+      const response = await fetch('http://10.79.236.162:5000/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
