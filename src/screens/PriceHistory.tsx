@@ -51,6 +51,11 @@ const PriceHistory: React.FC<{ navigation: any }> = ({ navigation }) => {
     return mandiOptions[selectedState] || ['Nagpur', 'Mumbai', 'Pune', 'Nashik'];
   };
   
+  // Debug logs
+  console.log('Crop options:', mutableCropOptions.length, mutableCropOptions);
+  console.log('State options:', mutableStateOptions.length, mutableStateOptions);
+  console.log('Current mandi options:', getCurrentMandiOptions());
+  
   const mockPriceData: PriceData[] = [
     { date: '01 OCT', price: 4200 },
     { date: '10 OCT', price: 4350 },
@@ -143,7 +148,9 @@ const PriceHistory: React.FC<{ navigation: any }> = ({ navigation }) => {
     );
   };
 
-  const renderModal = (visible: boolean, onClose: () => void, title: string, options: string[], onSelect: (value: string) => void) => (
+  const renderModal = (visible: boolean, onClose: () => void, title: string, options: string[], onSelect: (value: string) => void) => {
+    console.log('renderModal called:', { visible, title, optionsLength: options.length });
+    return (
     <Modal
       visible={visible}
       transparent={true}
@@ -164,6 +171,7 @@ const PriceHistory: React.FC<{ navigation: any }> = ({ navigation }) => {
                 key={option}
                 style={styles.modalOption}
                 onPress={() => {
+                  console.log('Option selected:', option);
                   onSelect(option);
                   onClose();
                 }}
@@ -176,6 +184,7 @@ const PriceHistory: React.FC<{ navigation: any }> = ({ navigation }) => {
       </View>
     </Modal>
   );
+};
 
   return (
     <SafeAreaView style={styles.container}>
@@ -196,26 +205,46 @@ const PriceHistory: React.FC<{ navigation: any }> = ({ navigation }) => {
         <View style={styles.chipsContainer}>
           <TouchableOpacity 
             style={styles.chip}
-            onPress={() => setShowCropModal(true)}
+            onPress={() => {
+              console.log('Crop modal pressed');
+              setShowCropModal(true);
+            }}
           >
             <Text style={styles.chipText}>Crop: {selectedCrop}</Text>
             <Icon name="chevron-down" size={12} color={COLORS.primary} />
           </TouchableOpacity>
           <TouchableOpacity 
             style={styles.chip}
-            onPress={() => setShowStateModal(true)}
+            onPress={() => {
+              console.log('State modal pressed');
+              setShowStateModal(true);
+            }}
           >
             <Text style={styles.chipText}>State: {selectedState}</Text>
             <Icon name="chevron-down" size={12} color={COLORS.primary} />
           </TouchableOpacity>
           <TouchableOpacity 
             style={styles.chip}
-            onPress={() => setShowMandiModal(true)}
+            onPress={() => {
+              console.log('Mandi modal pressed');
+              setShowMandiModal(true);
+            }}
           >
             <Text style={styles.chipText}>Mandi: {selectedMandi}</Text>
             <Icon name="chevron-down" size={12} color={COLORS.primary} />
           </TouchableOpacity>
         </View>
+        
+        {/* Test Button */}
+        <TouchableOpacity 
+          style={{backgroundColor: 'red', padding: 10, margin: 10}}
+          onPress={() => {
+            console.log('Test button pressed - opening crop modal');
+            setShowCropModal(true);
+          }}
+        >
+          <Text style={{color: 'white'}}>Test Open Crop Modal</Text>
+        </TouchableOpacity>
 
         {/* Time Range Selector */}
         <View style={styles.timeRangeContainer}>
