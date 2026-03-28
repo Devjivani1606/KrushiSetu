@@ -29,7 +29,11 @@ const Login: React.FC<{ navigation: any }> = ({ navigation }) => {
 
     setLoading(true);
     try {
-      const response = await fetch('http://10.64.34.162:5000/api/auth/login', {
+
+      //const response = await fetch('http://10.64.34.162:5000/api/auth/login', {
+
+      const response = await fetch('http://192.168.34.148:5000/api/auth/login', {
+
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim(), password }),
