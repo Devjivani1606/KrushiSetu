@@ -1,15 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import MIcon from 'react-native-vector-icons/MaterialIcons';
 import { COLORS } from '../theme/colors';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import SensorCard from '../components/SensorCard';
 import InfoRow from '../components/InfoRow';
 import DashboardActionCard from '../components/DashboardActionCard';
+import ProfileSetupForm from '../components/ProfileSetupForm';
+import ProfileDisplay from '../components/ProfileDisplay';
 import { ICONS } from '../constants/icons';
 import CropPredictionScreen from './CropPredictionScreen';
 import { fetchCurrentSoilData, SoilData } from '../services/api';
+
+interface ProfileData {
+  name: string;
+  email: string;
+  state: string;
+  city: string;
+}
 
 const HomeDashboard: React.FC<{ navigation: any; route: any }> = ({ navigation, route }) => {
   const user = route.params?.user;
@@ -17,6 +27,51 @@ const HomeDashboard: React.FC<{ navigation: any; route: any }> = ({ navigation, 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastSync, setLastSync] = useState<string>('');
+  
+  // Profile states
+  const [showProfileSetup, setShowProfileSetup] = useState(false);
+  const [showProfileDisplay, setShowProfileDisplay] = useState(false);
+  const [userProfile, setUserProfile] = useState<ProfileData | null>(null);
+
+  // Check if user profile exists on component mount
+  useEffect(() => {
+    checkUserProfile();
+  }, []);
+
+  const checkUserProfile = async () => {
+    try {
+      const profileData = await AsyncStorage.getItem('userProfile');
+      const hasSeenProfileSetup = await AsyncStorage.getItem('hasSeenProfileSetup');
+      
+      if (profileData && hasSeenProfileSetup === 'true') {
+        // User has completed profile setup
+        setUserProfile(JSON.parse(profileData));
+      } else {
+        // First time user OR hasn't completed profile setup
+        setShowProfileSetup(true);
+      }
+    } catch (error) {
+      console.error('Error checking user profile:', error);
+      setShowProfileSetup(true);
+    }
+  };
+
+  const handleSaveProfile = async (profileData: ProfileData) => {
+    try {
+      await AsyncStorage.setItem('userProfile', JSON.stringify(profileData));
+      await AsyncStorage.setItem('hasSeenProfileSetup', 'true');
+      setUserProfile(profileData);
+      console.log('Profile saved successfully:', profileData);
+      Alert.alert('Success', 'Profile saved successfully!');
+    } catch (error) {
+      console.error('Error saving profile:', error);
+      Alert.alert('Error', 'Failed to save profile');
+    }
+  };
+
+  const handleEditProfile = () => {
+    setShowProfileSetup(true);
+  };
 
   const loadData = async () => {
     try {
@@ -156,10 +211,39 @@ const HomeDashboard: React.FC<{ navigation: any; route: any }> = ({ navigation, 
           <MIcon name="trending-up" size={26} color={COLORS.primary} />
         </TouchableOpacity>
         
-        <TouchableOpacity style={styles.navItem}>
-          <MIcon name="person" size={26} color={COLORS.textLight} />
+        {/* Profile */}
+        <TouchableOpacity 
+          style={styles.navItem}
+          onPress={() => {
+            console.log('Profile icon clicked, userProfile:', userProfile);
+            console.log('showProfileDisplay should be:', !userProfile);
+            
+            if (userProfile) {
+              setShowProfileDisplay(true);
+            } else {
+              setShowProfileSetup(true);
+            }
+          }}
+        >
+          <MIcon name="person" size={26} color={userProfile ? COLORS.primary : COLORS.textLight} />
         </TouchableOpacity>
       </View>
+
+      {/* Profile Setup Modal */}
+      <ProfileSetupForm
+        visible={showProfileSetup}
+        onClose={() => setShowProfileSetup(false)}
+        onSave={handleSaveProfile}
+        initialEmail={user?.email || ''}
+      />
+
+      {/* Profile Display Modal */}
+      <ProfileDisplay
+        visible={showProfileDisplay}
+        onClose={() => setShowProfileDisplay(false)}
+        profile={userProfile}
+        onEdit={handleEditProfile}
+      />
     </View>
   );
 };
