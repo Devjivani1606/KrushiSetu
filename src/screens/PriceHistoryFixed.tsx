@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { COLORS } from '../theme/colors';
 import { cropOptions, stateOptions, mandiOptionsByState, type StateName } from '../config/mandi.config';
-import { fetchMandiHistory } from '../services/mandi';
 
 // Type assertion for mandiOptionsByState to match StateName keys
 const mandiOptions = mandiOptionsByState as Record<StateName, string[]>;
@@ -52,12 +51,10 @@ const PriceHistory: React.FC<{ navigation: any }> = ({ navigation }) => {
     return mandiOptions[selectedState] || ['Nagpur', 'Mumbai', 'Pune', 'Nashik'];
   };
   
-  // Debug logs - remove in production
-  useEffect(() => {
-    console.log('Crop options:', mutableCropOptions.length, mutableCropOptions);
-    console.log('State options:', mutableStateOptions.length, mutableStateOptions);
-    console.log('Current mandi options:', getCurrentMandiOptions());
-  }, []); // Only run once
+  // Debug logs
+  console.log('Crop options:', mutableCropOptions.length, mutableCropOptions);
+  console.log('State options:', mutableStateOptions.length, mutableStateOptions);
+  console.log('Current mandi options:', getCurrentMandiOptions());
   
   const mockPriceData: PriceData[] = [
     { date: '01 OCT', price: 4200 },
@@ -67,40 +64,10 @@ const PriceHistory: React.FC<{ navigation: any }> = ({ navigation }) => {
   ];
 
   useEffect(() => {
-    const fetchPriceData = async () => {
-      try {
-        setLoading(true);
-        console.log('Fetching price data for:', { selectedCrop, selectedState, selectedMandi, range: selectedTimeRange });
-        
-        const result = await fetchMandiHistory({
-          crop: selectedCrop,
-          state: selectedState,
-          mandi: selectedMandi,
-          range: selectedTimeRange as any
-        });
-        
-        if (result.kind === 'ok') {
-          const formattedData = result.payload.history.map(item => ({
-            date: new Date(item.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }).toUpperCase(),
-            price: item.modal_price
-          }));
-          setPriceData(formattedData);
-          console.log('Price data loaded:', formattedData.length, 'points');
-        } else {
-          // Fallback to mock data if API fails
-          console.log('API failed, using mock data');
-          setPriceData(mockPriceData);
-        }
-      } catch (error) {
-        console.error('Error fetching price data:', error);
-        // Fallback to mock data
-        setPriceData(mockPriceData);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPriceData();
+    setTimeout(() => {
+      setPriceData(mockPriceData);
+      setLoading(false);
+    }, 1000);
   }, [selectedTimeRange, selectedCrop, selectedState, selectedMandi]);
 
   const renderSimpleChart = () => {
@@ -181,7 +148,7 @@ const PriceHistory: React.FC<{ navigation: any }> = ({ navigation }) => {
     );
   };
 
-  const renderModal = useCallback((visible: boolean, onClose: () => void, title: string, options: string[], onSelect: (value: string) => void) => {
+  const renderModal = (visible: boolean, onClose: () => void, title: string, options: string[], onSelect: (value: string) => void) => {
     console.log('renderModal called:', { visible, title, optionsLength: options.length });
     return (
     <Modal
@@ -217,7 +184,7 @@ const PriceHistory: React.FC<{ navigation: any }> = ({ navigation }) => {
       </View>
     </Modal>
   );
-}, []);
+};
 
   return (
     <SafeAreaView style={styles.container}>
@@ -267,6 +234,17 @@ const PriceHistory: React.FC<{ navigation: any }> = ({ navigation }) => {
             <Icon name="chevron-down" size={12} color={COLORS.primary} />
           </TouchableOpacity>
         </View>
+        
+        {/* Test Button */}
+        <TouchableOpacity 
+          style={{backgroundColor: 'red', padding: 10, margin: 10}}
+          onPress={() => {
+            console.log('Test button pressed - opening crop modal');
+            setShowCropModal(true);
+          }}
+        >
+          <Text style={{color: 'white'}}>Test Open Crop Modal</Text>
+        </TouchableOpacity>
 
         {/* Time Range Selector */}
         <View style={styles.timeRangeContainer}>
@@ -313,15 +291,11 @@ const PriceHistory: React.FC<{ navigation: any }> = ({ navigation }) => {
         <View style={styles.statsContainer}>
           <View style={styles.statCard}>
             <Text style={styles.statTitle}>Highest Price</Text>
-            <Text style={styles.highestPrice}>
-              ₹{priceData.length > 0 ? Math.max(...priceData.map(d => d.price)).toLocaleString('en-IN') : '0'}
-            </Text>
+            <Text style={styles.highestPrice}>₹4,850</Text>
           </View>
           <View style={styles.statCard}>
             <Text style={styles.statTitle}>Lowest Price</Text>
-            <Text style={styles.lowestPrice}>
-              ₹{priceData.length > 0 ? Math.min(...priceData.map(d => d.price)).toLocaleString('en-IN') : '0'}
-            </Text>
+            <Text style={styles.lowestPrice}>₹4,100</Text>
           </View>
         </View>
 

@@ -33,13 +33,13 @@ import { API_CONFIG } from '../config/api.config';
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 interface WeatherCurrent {
-  temperature: number;
-  feelsLike: number;
-  humidity: number;
-  windSpeed: number;
-  rainChance: number;
-  condition: string;
-  description: string;
+  temperature: string;
+  feelsLike?: number;
+  humidity: string;
+  windSpeed: string;
+  rainChance: string;
+  condition?: string;
+  description?: string;
 }
 
 interface WeatherForecast {
@@ -51,7 +51,7 @@ interface WeatherForecast {
 
 interface WeatherData {
   city: string;
-  country: string;
+  country?: string;
   current: WeatherCurrent;
   forecast: WeatherForecast;
 }
@@ -91,9 +91,18 @@ const CITY_LIST: City[] = [
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 /**
+ * Extracts numeric value from string with unit (e.g., "35°C" -> 35, "16%" -> 16)
+ */
+const extractNumber = (value: string): number => {
+  const match = value.match(/-?\d+\.?\d*/);
+  return match ? parseFloat(match[0]) : 0;
+};
+
+/**
  * Maps an OpenWeatherMap condition string to a MaterialCommunityIcon name.
  */
-const getWeatherIcon = (condition: string): string => {
+const getWeatherIcon = (condition?: string): string => {
+  if (!condition) return 'weather-partly-cloudy';
   const c = condition.toLowerCase();
   if (c.includes('clear') || c.includes('sunny')) return 'weather-sunny';
   if (c.includes('cloud')) return 'weather-cloudy';
@@ -109,15 +118,20 @@ const getWeatherIcon = (condition: string): string => {
  */
 const generateAgriAdvice = (current: WeatherCurrent) => {
   const advice: { title: string; message: string; icon: string }[] = [];
+  
+  const humidity = extractNumber(current.humidity);
+  const temperature = extractNumber(current.temperature);
+  const windSpeed = extractNumber(current.windSpeed);
+  const rainChance = extractNumber(current.rainChance);
 
   // Irrigation advice based on humidity + temperature
-  if (current.humidity < 50 && current.temperature > 30) {
+  if (humidity < 50 && temperature > 30) {
     advice.push({
       title: 'Irrigation Advice',
       message: 'Hot & dry conditions. Schedule evening irrigation to reduce evaporation.',
       icon: 'water',
     });
-  } else if (current.humidity > 80) {
+  } else if (humidity > 80) {
     advice.push({
       title: 'Irrigation Advice',
       message: 'High humidity. Skip irrigation today to avoid waterlogging.',
@@ -132,16 +146,16 @@ const generateAgriAdvice = (current: WeatherCurrent) => {
   }
 
   // Spray warning based on wind speed
-  if (current.windSpeed > 15) {
+  if (windSpeed > 15) {
     advice.push({
       title: 'Spray Warning',
-      message: `High wind speed (${current.windSpeed} km/h). Avoid pesticide / fertilizer spraying.`,
+      message: `High wind speed (${windSpeed} km/h). Avoid pesticide / fertilizer spraying.`,
       icon: 'spray',
     });
-  } else if (current.rainChance > 60) {
+  } else if (rainChance > 60) {
     advice.push({
       title: 'Spray Warning',
-      message: `High rain probability (${current.rainChance}%). Delay pesticide spraying.`,
+      message: `High rain probability (${rainChance}%). Delay pesticide spraying.`,
       icon: 'weather-rainy',
     });
   }
@@ -190,7 +204,7 @@ const LiveWeatherDashboard: React.FC<{ navigation: any }> = ({ navigation }) => 
         throw new Error(data.error || 'Failed to fetch weather data');
       }
 
-      setWeatherData(data as WeatherData);
+      setWeatherData(data.data as WeatherData);
 
       // Format last updated time
       const now = new Date();
@@ -286,22 +300,18 @@ const LiveWeatherDashboard: React.FC<{ navigation: any }> = ({ navigation }) => 
       day: 'Today',
       icon: getWeatherIcon(w.current.condition),
       maxTemp: w.current.temperature,
-      minTemp: w.current.feelsLike,
+      minTemp: w.current.feelsLike ? `${w.current.feelsLike}°` : w.current.temperature,
       isToday: true,
     },
     {
       day: 'Tomorrow',
-      icon: w.forecast.tomorrowMax !== null
-        ? (w.current.rainChance > 50 ? 'weather-rainy' : 'weather-partly-cloudy')
-        : 'weather-partly-cloudy',
+      icon: extractNumber(w.current.rainChance) > 50 ? 'weather-rainy' : 'weather-partly-cloudy',
       maxTemp: w.forecast.tomorrowMax ?? '--',
       minTemp: w.forecast.tomorrowMin ?? '--',
     },
     {
       day: 'Day 3',
-      icon: w.forecast.dayAfterMax !== null
-        ? (w.forecast.dayAfterMax < 28 ? 'weather-rainy' : 'weather-cloudy')
-        : 'weather-cloudy',
+      icon: (w.forecast.dayAfterMax ?? 0) < 28 ? 'weather-rainy' : 'weather-cloudy',
       maxTemp: w.forecast.dayAfterMax ?? '--',
       minTemp: w.forecast.dayAfterMin ?? '--',
     },
@@ -323,7 +333,7 @@ const LiveWeatherDashboard: React.FC<{ navigation: any }> = ({ navigation }) => 
           <View>
             <View style={styles.cityRow}>
               <Text style={styles.location}>
-                {w.city}, {w.country}
+                {w.city}{w.country ? `, ${w.country}` : ''}
               </Text>
               {/* Dropdown chevron to hint the user it's tappable */}
               <MIcon name="keyboard-arrow-down" size={16} color={COLORS.primary} />
@@ -368,9 +378,9 @@ const LiveWeatherDashboard: React.FC<{ navigation: any }> = ({ navigation }) => 
         <View style={styles.mainWeatherCard}>
           <View style={styles.weatherHeader}>
             <View style={styles.temperatureContainer}>
-              <Text style={styles.temperature}>{w.current.temperature}°C</Text>
-              <Text style={styles.condition}>{w.current.condition}</Text>
-              <Text style={styles.description}>{w.current.description}</Text>
+              <Text style={styles.temperature}>{w.current.temperature}</Text>
+              <Text style={styles.condition}>{w.current.condition || 'Clear'}</Text>
+              <Text style={styles.description}>{w.current.description || 'Clear skies'}</Text>
             </View>
             <View style={styles.weatherIconContainer}>
               <Icon
@@ -386,35 +396,35 @@ const LiveWeatherDashboard: React.FC<{ navigation: any }> = ({ navigation }) => 
             <View style={styles.statItem}>
               <Icon name="water-percent" size={20} color="#2196F3" />
               <Text style={styles.statLabel}>Humidity</Text>
-              <Text style={styles.statValue}>{w.current.humidity}%</Text>
+              <Text style={styles.statValue}>{w.current.humidity}</Text>
             </View>
             <View style={styles.statItem}>
               <Icon name="weather-windy" size={20} color="#4CAF50" />
               <Text style={styles.statLabel}>Wind</Text>
-              <Text style={styles.statValue}>{w.current.windSpeed} km/h</Text>
+              <Text style={styles.statValue}>{w.current.windSpeed}</Text>
             </View>
             <View style={styles.statItem}>
               <Icon name="weather-rainy" size={20} color="#9C27B0" />
               <Text style={styles.statLabel}>Rain</Text>
-              <Text style={styles.statValue}>{w.current.rainChance}%</Text>
+              <Text style={styles.statValue}>{w.current.rainChance}</Text>
             </View>
             <View style={styles.statItem}>
               <Icon name="thermometer" size={20} color="#FF5722" />
               <Text style={styles.statLabel}>Feels Like</Text>
-              <Text style={styles.statValue}>{w.current.feelsLike}°C</Text>
+              <Text style={styles.statValue}>{w.current.feelsLike ? `${w.current.feelsLike}°C` : 'N/A'}</Text>
             </View>
           </View>
         </View>
 
         {/* ── Weather Alert (shows when rain chance > 60%) ───────────── */}
-        {w.current.rainChance > 60 && (
+        {extractNumber(w.current.rainChance) > 60 && (
           <View style={styles.alertCard}>
             <View style={styles.alertHeader}>
               <Icon name="alert" size={24} color="#FF9800" />
               <Text style={styles.alertTitle}>Weather Alert</Text>
             </View>
             <Text style={styles.alertMessage}>
-              High rain probability ({w.current.rainChance}%) today. Consider covering crops
+              High rain probability ({w.current.rainChance}) today. Consider covering crops
               and avoiding field operations.
             </Text>
           </View>
