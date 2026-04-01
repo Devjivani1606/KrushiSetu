@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, ActivityIndicator, Platform } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import MIcon from 'react-native-vector-icons/MaterialIcons';
+import { LineChart } from 'react-native-chart-kit';
 import { COLORS } from '../theme/colors';
 
 const { width, height } = Dimensions.get('window');
@@ -186,7 +187,7 @@ const SensorHistory = ({ navigation }: any) => {
     }
   };
 
-  // Advanced chart with smooth curves and proper scaling
+  // Professional chart rendering using react-native-chart-kit
   const renderChart = () => {
     if (chartData.length === 0) {
       return (
@@ -198,130 +199,93 @@ const SensorHistory = ({ navigation }: any) => {
       );
     }
 
-    const maxValue = Math.max(...chartData.map(d => d.value));
-    const minValue = Math.min(...chartData.map(d => d.value));
-    const range = maxValue - minValue || 1; // Prevent division by zero
+    const dataCount = chartData.length;
+    const PX_PER_POINT = 70;
+    const cardInnerWidth = width - 80;
+    const chartWidth = Math.max(cardInnerWidth, dataCount * PX_PER_POINT);
+    const isScrollable = chartWidth > cardInnerWidth;
 
-    const chartHeight = 180;
-    const chartWidth = width - 120; // Reduced width to prevent overflow
-    const pointSpacing = chartWidth / (chartData.length - 1);
-    const padding = 8;
+    const labels = chartData.map(d => d.time);
+    const dataValues = chartData.map(d => d.value);
+
+    const chartComponent = (
+      <LineChart
+        data={{
+          labels: labels,
+          datasets: [{ data: dataValues, strokeWidth: 3 }],
+        }}
+        width={chartWidth}
+        height={220}
+        yAxisLabel=""
+        yAxisSuffix={selectedSensor === 'Temperature' ? '°' : '%'}
+        chartConfig={{
+          backgroundColor: COLORS.card,
+          backgroundGradientFrom: COLORS.card,
+          backgroundGradientTo: COLORS.card,
+          decimalPlaces: selectedSensor === 'Soil pH' ? 1 : 0,
+          color: (opacity = 1) => `rgba(45, 106, 79, ${opacity})`,
+          labelColor: (opacity = 1) => `rgba(82, 96, 102, ${opacity})`,
+          style: { borderRadius: 16 },
+          propsForDots: {
+            r: '5',
+            strokeWidth: '2',
+            stroke: COLORS.primary,
+            fill: COLORS.white,
+          },
+          propsForBackgroundLines: {
+            strokeDasharray: '5 5',
+            stroke: 'rgba(0,0,0,0.05)',
+          },
+          propsForLabels: {
+            fontSize: 10,
+            fontWeight: '600',
+          },
+          fillShadowGradient: COLORS.primary,
+          fillShadowGradientOpacity: 0.1,
+        }}
+        bezier
+        fromZero={false}
+        style={styles.chartStyle}
+        withInnerLines={true}
+        withOuterLines={false}
+        withDots={true}
+        withShadow={false}
+        segments={4}
+      />
+    );
 
     return (
       <View style={styles.chartContainer}>
         <View style={styles.chartHeader}>
-          <Text style={styles.chartTitle}>Sensor Readings</Text>
+          <Text style={styles.chartTitle}>{selectedSensor} Trend</Text>
           <View style={styles.chartLegend}>
             <View style={styles.legendItem}>
               <View style={[styles.legendDot, { backgroundColor: COLORS.primary }]} />
-              <Text style={styles.legendText}>{selectedSensor}</Text>
+              <Text style={styles.legendText}>Reading</Text>
             </View>
           </View>
         </View>
 
-        <View style={styles.chartWrapper}>
-          {/* Y-axis labels */}
-          <View style={styles.yAxis}>
-            <Text style={styles.yAxisLabel}>{formatValue(maxValue)}</Text>
-            <Text style={styles.yAxisLabel}>
-              {formatValue(minValue + (maxValue - minValue) / 2)}
-            </Text>
-            <Text style={styles.yAxisLabel}>{formatValue(minValue)}</Text>
+        {isScrollable ? (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chartScrollContent}
+          >
+            {chartComponent}
+          </ScrollView>
+        ) : (
+          <View style={styles.chartWrapper}>
+            {chartComponent}
           </View>
+        )}
 
-          {/* Chart area */}
-          <View style={styles.chartArea}>
-            {/* Grid lines */}
-            <View style={[styles.gridLine, { top: 0 }]} />
-            <View style={[styles.gridLine, { top: '50%' }]} />
-            <View style={[styles.gridLine, { top: '100%' }]} />
-
-            {/* Data visualization */}
-            <View style={styles.chartPoints}>
-              {/* Smooth curve line using multiple segments */}
-              {chartData.length > 1 && chartData.map((point, index) => {
-                if (index === 0) return null;
-
-                const x = index * pointSpacing + padding;
-                const y = chartHeight - ((point.value - minValue) / range) * chartHeight;
-                const prevX = (index - 1) * pointSpacing + padding;
-                const prevY = chartHeight - ((chartData[index - 1].value - minValue) / range) * chartHeight;
-
-                // Create smooth curve with multiple segments
-                const segments = 8;
-                return Array.from({ length: segments }, (_, segIndex) => {
-                  const t = segIndex / segments;
-                  const smoothX = prevX + (x - prevX) * t;
-                  const smoothY = prevY + (y - prevY) * t +
-                    Math.sin(t * Math.PI) * Math.abs(y - prevY) * 0.1;
-
-                  return (
-                    <View
-                      key={`${index}-${segIndex}`}
-                      style={{
-                        position: 'absolute',
-                        left: smoothX - 0.5,
-                        top: smoothY - 0.5,
-                        width: 1,
-                        height: 2,
-                        backgroundColor: COLORS.primary,
-                        transform: [
-                          { rotate: `${Math.atan2(y - prevY, x - prevX)}rad` }
-                        ],
-                      }}
-                    />
-                  );
-                });
-              })}
-
-              {/* Data points */}
-              {chartData.map((point, index) => {
-                const x = index * pointSpacing + padding;
-                const y = chartHeight - ((point.value - minValue) / range) * chartHeight;
-
-                return (
-                  <View key={index}>
-                    {/* Data point */}
-                    <View
-                      style={[
-                        styles.dataPoint,
-                        {
-                          left: x - 8,
-                          top: y - 8,
-                        },
-                      ]}
-                    />
-
-                    {/* Value labels */}
-                    {index % Math.ceil(chartData.length / 4) === 0 && (
-                      <View style={[styles.valueLabel, { left: x - 25, top: y - 40 }]}>
-                        <Text style={styles.valueLabelText}>{formatValue(point.value)}</Text>
-                      </View>
-                    )}
-                  </View>
-                );
-              })}
-            </View>
-
-            {/* X-axis labels */}
-            <View style={styles.xAxis}>
-              {chartData.map((point, index) => (
-                <Text
-                  key={index}
-                  style={[
-                    styles.xAxisLabel,
-                    {
-                      left: index * pointSpacing + padding - 20,
-                      opacity: index % Math.ceil(chartData.length / 4) === 0 ? 1 : 0.3
-                    }
-                  ]}
-                >
-                  {point.time}
-                </Text>
-              ))}
-            </View>
+        {isScrollable && (
+          <View style={styles.scrollHint}>
+             <Icon name="gesture-swipe-horizontal" size={16} color={COLORS.textLight} />
+             <Text style={styles.scrollHintText}>Swipe to see more historical data</Text>
           </View>
-        </View>
+        )}
       </View>
     );
   };
@@ -658,78 +622,28 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   chartWrapper: {
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  chartScrollContent: {
+    paddingRight: 16,
+  },
+  chartStyle: {
+    borderRadius: 12,
+    marginLeft: -20, // Adjust for internal padding of the library
+  },
+  scrollHint: {
     flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 15,
+    paddingVertical: 8,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 10,
   },
-  yAxis: {
-    width: 60,
-    justifyContent: 'space-between',
-    height: 180,
-    paddingRight: 10,
-  },
-  yAxisLabel: {
+  scrollHintText: {
     fontSize: 12,
-    color: COLORS.textLight,
-    fontWeight: '500',
-    textAlign: 'right',
-  },
-  chartArea: {
-    flex: 1,
-    height: 180,
-    position: 'relative',
-    marginLeft: 10,
-  },
-  gridLine: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: COLORS.border,
-  },
-  chartPoints: {
-    position: 'relative',
-    height: 180,
-  },
-  dataPoint: {
-    position: 'absolute',
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: COLORS.primary,
-    borderWidth: 3,
-    borderColor: COLORS.white,
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.4,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  valueLabel: {
-    position: 'absolute',
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  valueLabelText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: COLORS.white,
-  },
-  xAxis: {
-    position: 'absolute',
-    bottom: -30,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-  },
-  xAxisLabel: {
-    position: 'absolute',
-    fontSize: 11,
     color: COLORS.textLight,
     fontWeight: '500',
   },

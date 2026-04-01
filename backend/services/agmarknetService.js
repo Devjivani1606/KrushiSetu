@@ -19,6 +19,8 @@ const normalizeRecord = (r) => ({
     market: r.market || r.Market,
     commodity: r.commodity || r.Commodity,
     modal_price: Number(r.modal_price || r.Modal_Price) || null,
+    min_price: Number(r.min_price || r.Min_Price) || null,
+    max_price: Number(r.max_price || r.Max_Price) || null,
     arrival_date: r.arrival_date || r.Arrival_Date,
 });
 
@@ -75,21 +77,55 @@ const filterData = (data, crop, state, mandi) => {
 };
 
 // --------------------------------------------------
-// MOCK DATA (Fallback)
+// MOCK DATA (Fallback) - varies by crop for realism
 // --------------------------------------------------
-const getMockData = (crop) => {
-    console.log("📊 Using MOCK DATA");
+const CROP_BASE_PRICES = {
+    Rice: 3100,
+    Wheat: 2500,
+    Onion: 1800,
+    Cotton: 7200,
+    Maize: 2100,
+    Soybean: 4800,
+    Tomato: 2200,
+    Potato: 1500,
+    Bajra: 2300,
+    Sugarcane: 3500,
+    'Chana (Gram)': 5200,
+};
 
+const getMockData = (crop, range) => {
+    console.log("📊 Using MOCK DATA for", crop, "range:", range);
+
+    const basePrice = CROP_BASE_PRICES[crop] || 3000;
     const today = new Date();
     const history = [];
 
-    for (let i = 10; i >= 0; i--) {
+    // Determine number of data points based on range
+    let days;
+    switch (range) {
+        case '7D': days = 7; break;
+        case '6M': days = 30; break;  // 30 data points sampled across 6M
+        case '1Y': days = 24; break;  // 24 data points sampled across 1Y
+        default: days = 11; break;    // 1M default
+    }
+
+    // Generate with a slight upward/downward trend + noise
+    const trendDirection = Math.random() > 0.4 ? 1 : -1;
+    const trendStrength = Math.random() * 5 + 1; // 1-6 per step
+
+    for (let i = days; i >= 0; i--) {
         const date = new Date();
-        date.setDate(today.getDate() - i);
+        const daysBack = range === '6M' ? i * 6 :
+                         range === '1Y' ? i * 15 : i;
+        date.setDate(today.getDate() - daysBack);
+
+        const trendComponent = trendDirection * trendStrength * (days - i);
+        const noise = Math.floor(Math.random() * 200) - 100;
+        const price = Math.max(basePrice + trendComponent + noise, basePrice * 0.7);
 
         history.push({
             date: date.toISOString().split('T')[0],
-            modal_price: 3000 + Math.floor(Math.random() * 500),
+            modal_price: Math.round(price),
         });
     }
 
@@ -97,42 +133,110 @@ const getMockData = (crop) => {
 };
 
 // --------------------------------------------------
-// PUBLIC FUNCTION
+// Compute stats from history
 // --------------------------------------------------
-const getPriceHistory = async (crop, state, mandi) => {
+const computeStats = (history) => {
+    if (!history || history.length === 0) {
+        return { highest_price: 0, lowest_price: 0, trend: '+0%' };
+    }
+
+    const prices = history.map(h => h.modal_price).filter(p => p != null && Number.isFinite(p));
+
+    if (prices.length === 0) {
+        return { highest_price: 0, lowest_price: 0, trend: '+0%' };
+    }
+
+    const highest_price = Math.max(...prices);
+    const lowest_price = Math.min(...prices);
+
+    // Trend = percentage change from first to last
+    const first = prices[0];
+    const last = prices[prices.length - 1];
+    let trendPercent = 0;
+    if (first > 0) {
+        trendPercent = ((last - first) / first) * 100;
+    }
+    const sign = trendPercent >= 0 ? '+' : '';
+    const trend = `${sign}${trendPercent.toFixed(1)}%`;
+
+    return { highest_price, lowest_price, trend };
+};
+
+// --------------------------------------------------
+// PUBLIC: Get Price History (for graphs)
+// --------------------------------------------------
+const getPriceHistory = async (crop, state, mandi, range = '1M') => {
+    const data = await fetchFromAPI();
+
+    let history;
+
+    if (!data.length) {
+        history = getMockData(crop, range);
+    } else {
+        const filtered = filterData(data, crop, state, mandi);
+
+        if (!filtered.length) {
+            console.log("⚠️ No matching data, using mock");
+            history = getMockData(crop, range);
+        } else {
+            history = filtered.slice(0, 30).map((r) => ({
+                date: r.arrival_date,
+                modal_price: r.modal_price,
+            }));
+        }
+    }
+
+    const stats = computeStats(history);
+
+    return {
+        crop,
+        mandi,
+        history,
+        highest_price: stats.highest_price,
+        lowest_price: stats.lowest_price,
+        trend: stats.trend,
+    };
+};
+
+// --------------------------------------------------
+// PUBLIC: Get Latest Price (single latest record)
+// --------------------------------------------------
+const getLatestPrice = async (crop, state, mandi) => {
     const data = await fetchFromAPI();
 
     if (!data.length) {
+        // Return mock latest
+        const basePrice = CROP_BASE_PRICES[crop] || 3000;
+        const noise = Math.floor(Math.random() * 300);
         return {
-            crop,
-            mandi,
-            history: getMockData(crop),
+            min_price: basePrice - 200 + noise,
+            max_price: basePrice + 400 + noise,
+            modal_price: basePrice + 100 + noise,
+            arrival_date: new Date().toISOString().split('T')[0],
+            market: mandi,
+            state: state,
         };
     }
 
     const filtered = filterData(data, crop, state, mandi);
 
     if (!filtered.length) {
-        console.log("⚠️ No matching data, using mock");
-        return {
-            crop,
-            mandi,
-            history: getMockData(crop),
-        };
+        return null;
     }
 
-    const history = filtered.slice(0, 10).map((r) => ({
-        date: r.arrival_date,
-        modal_price: r.modal_price,
-    }));
-
+    // Return the first matching (most recent)
+    const latest = filtered[0];
     return {
-        crop,
-        mandi,
-        history,
+        min_price: latest.min_price,
+        max_price: latest.max_price,
+        modal_price: latest.modal_price,
+        arrival_date: latest.arrival_date,
+        market: latest.market,
+        state: latest.state,
     };
 };
 
 module.exports = {
     getPriceHistory,
+    getLatestPrice,
 };

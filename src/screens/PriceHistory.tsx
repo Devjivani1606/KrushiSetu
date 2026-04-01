@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, {useState, useEffect, useMemo} from 'react';
 import {
   View,
   Text,
@@ -9,282 +9,454 @@ import {
   ActivityIndicator,
   Modal,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {SafeAreaView} from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { COLORS } from '../theme/colors';
-import { cropOptions, stateOptions, mandiOptionsByState, type StateName } from '../config/mandi.config';
-import { fetchMandiHistory } from '../services/mandi';
+import {LineChart} from 'react-native-chart-kit';
+import {COLORS} from '../theme/colors';
+import {
+  cropOptions,
+  stateOptions,
+  mandiOptionsByState,
+  type StateName,
+} from '../config/mandi.config';
+import {fetchMandiHistory} from '../services/mandi';
 
-// Type assertion for mandiOptionsByState to match StateName keys
-const mandiOptions = mandiOptionsByState as Record<StateName, string[]>;
-
-const { width } = Dimensions.get('window');
+const {width: SCREEN_WIDTH} = Dimensions.get('window');
 
 interface PriceData {
   date: string;
   price: number;
 }
 
-const PriceHistory: React.FC<{ navigation: any }> = ({ navigation }) => {
-  const [selectedTimeRange, setSelectedTimeRange] = useState('1M');
-  const [priceData, setPriceData] = useState<PriceData[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showCropModal, setShowCropModal] = useState(false);
-  const [showStateModal, setShowStateModal] = useState(false);
-  const [showMandiModal, setShowMandiModal] = useState(false);
-  
+type FetchState = 'idle' | 'loading' | 'success' | 'empty' | 'error';
+
+const PriceHistory: React.FC<{navigation: any}> = ({navigation}) => {
+  // Selection state
   const [selectedCrop, setSelectedCrop] = useState('Rice');
   const [selectedState, setSelectedState] = useState<StateName>('Maharashtra');
   const [selectedMandi, setSelectedMandi] = useState('Nagpur');
+  const [selectedTimeRange, setSelectedTimeRange] = useState('1M');
+
+  // Data state
+  const [priceData, setPriceData] = useState<PriceData[]>([]);
+  const [fetchState, setFetchState] = useState<FetchState>('idle');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [trendPercent, setTrendPercent] = useState('+0%');
+
+  // Modal state
+  const [showCropModal, setShowCropModal] = useState(false);
+  const [showStateModal, setShowStateModal] = useState(false);
+  const [showMandiModal, setShowMandiModal] = useState(false);
 
   const timeRanges = ['7D', '1M', '6M', '1Y'];
-  
-  // Create mutable copies for modal functions
-  const mutableCropOptions = [...cropOptions];
-  const mutableStateOptions = [...stateOptions];
-  
-  // Wrapper functions to handle type conversion
-  const handleCropSelect = (crop: string) => setSelectedCrop(crop);
-  const handleStateSelect = (state: string) => setSelectedState(state as StateName);
-  const handleMandiSelect = (mandi: string) => setSelectedMandi(mandi);
-  
-  const getCurrentMandiOptions = () => {
-    return mandiOptions[selectedState] || ['Nagpur', 'Mumbai', 'Pune', 'Nashik'];
-  };
-  
-  // Debug logs - remove in production
-  useEffect(() => {
-    console.log('Crop options:', mutableCropOptions.length, mutableCropOptions);
-    console.log('State options:', mutableStateOptions.length, mutableStateOptions);
-    console.log('Current mandi options:', getCurrentMandiOptions());
-  }, []); // Only run once
-  
-  const mockPriceData: PriceData[] = [
-    { date: '01 OCT', price: 4200 },
-    { date: '10 OCT', price: 4350 },
-    { date: '20 OCT', price: 4500 },
-    { date: '30 OCT', price: 4680 },
-  ];
 
+  // Get mandi options for selected state
+  const currentMandiOptions = useMemo(() => {
+    const options = (mandiOptionsByState as Record<string, string[]>)[
+      selectedState
+    ];
+    return options || ['Nagpur', 'Mumbai', 'Pune', 'Nashik'];
+  }, [selectedState]);
+
+  // When state changes, reset mandi to first option of new state
   useEffect(() => {
+    const options = (mandiOptionsByState as Record<string, string[]>)[
+      selectedState
+    ];
+    if (options && options.length > 0) {
+      setSelectedMandi(options[0]);
+    }
+  }, [selectedState]);
+
+  // Fetch data when selection changes
+  useEffect(() => {
+    let cancelled = false;
+
     const fetchPriceData = async () => {
       try {
-        setLoading(true);
-        console.log('Fetching price data for:', { selectedCrop, selectedState, selectedMandi, range: selectedTimeRange });
-        
+        setFetchState('loading');
+        setErrorMessage('');
+
         const result = await fetchMandiHistory({
           crop: selectedCrop,
           state: selectedState,
           mandi: selectedMandi,
-          range: selectedTimeRange as any
+          range: selectedTimeRange as any,
         });
-        
+
+        if (cancelled) return;
+
         if (result.kind === 'ok') {
           const formattedData = result.payload.history.map(item => ({
-            date: new Date(item.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }).toUpperCase(),
-            price: item.modal_price
+            date: new Date(item.date)
+              .toLocaleDateString('en-IN', {day: '2-digit', month: 'short'})
+              .toUpperCase(),
+            price: item.modal_price,
           }));
-          setPriceData(formattedData);
-          console.log('Price data loaded:', formattedData.length, 'points');
+
+          if (formattedData.length === 0) {
+            setFetchState('empty');
+            setPriceData([]);
+          } else {
+            setPriceData(formattedData);
+            setTrendPercent(result.payload.trend || '+0%');
+            setFetchState('success');
+          }
         } else {
-          // Fallback to mock data if API fails
-          console.log('API failed, using mock data');
-          setPriceData(mockPriceData);
+          // kind === 'empty'
+          setFetchState('empty');
+          setPriceData([]);
         }
-      } catch (error) {
+      } catch (error: any) {
+        if (cancelled) return;
         console.error('Error fetching price data:', error);
-        // Fallback to mock data
-        setPriceData(mockPriceData);
-      } finally {
-        setLoading(false);
+        setFetchState('error');
+        setErrorMessage(
+          error?.message || 'Failed to load data. Please try again.',
+        );
       }
     };
 
     fetchPriceData();
+
+    return () => {
+      cancelled = true;
+    };
   }, [selectedTimeRange, selectedCrop, selectedState, selectedMandi]);
 
-  const renderSimpleChart = () => {
+  // Derived statistics
+  const {highestPrice, lowestPrice, avgPrice} = useMemo(() => {
+    if (priceData.length === 0) {
+      return {highestPrice: 0, lowestPrice: 0, avgPrice: 0};
+    }
+    const prices = priceData.map(d => d.price);
+    const highest = Math.max(...prices);
+    const lowest = Math.min(...prices);
+    const avg = Math.round(prices.reduce((a, b) => a + b, 0) / prices.length);
+    return {highestPrice: highest, lowestPrice: lowest, avgPrice: avg};
+  }, [priceData]);
+
+  // Dynamic market insight
+  const marketInsight = useMemo(() => {
+    if (priceData.length < 2) {
+      return 'Select a crop and state to see market insights.';
+    }
+
+    const first = priceData[0].price;
+    const last = priceData[priceData.length - 1].price;
+    const change = ((last - first) / first) * 100;
+
+    if (change > 5) {
+      return `${selectedCrop} prices are trending upwards in ${selectedState} with a ${change.toFixed(1)}% increase. Strong demand is driving prices higher. Consider selling if you have stock.`;
+    } else if (change > 0) {
+      return `${selectedCrop} prices in ${selectedState} are showing a slight upward trend (+${change.toFixed(1)}%). Market is relatively stable with moderate demand.`;
+    } else if (change > -5) {
+      return `${selectedCrop} prices in ${selectedState} are showing a slight decline (${change.toFixed(1)}%). Supply is outpacing demand currently. Prices may stabilize soon.`;
+    } else {
+      return `${selectedCrop} prices in ${selectedState} are showing a significant decline (${change.toFixed(1)}%). High supply is driving prices down. Consider holding stock if possible.`;
+    }
+  }, [priceData, selectedCrop, selectedState]);
+
+  // Trend direction for badge color
+  const isTrendPositive = useMemo(() => {
+    return trendPercent.startsWith('+');
+  }, [trendPercent]);
+
+  // Chart rendering with react-native-chart-kit (horizontally scrollable)
+  const renderChart = () => {
     if (priceData.length === 0) return null;
-    
-    const maxPrice = Math.max(...priceData.map(d => d.price));
-    const minPrice = Math.min(...priceData.map(d => d.price));
-    const priceRange = maxPrice - minPrice || 1;
-    const chartHeight = 160;
-    const chartWidth = width - 64;
-    const pointSpacing = chartWidth / (priceData.length - 1);
-    
-    return (
-      <View style={styles.chartContainer}>
-        {/* Grid lines */}
-        {[0, 1, 2].map((index) => (
-          <View
-            key={index}
-            style={[
-              styles.gridLine,
-              { bottom: (index * chartHeight) / 2 }
-            ]}
-          />
-        ))}
-        
-        {/* Chart line and points */}
-        <View style={styles.chartLineContainer}>
-          {priceData.map((point, index) => {
-            const x = index * pointSpacing;
-            const y = chartHeight - ((point.price - minPrice) / priceRange) * chartHeight;
-            const isHighlighted = index === priceData.length - 1;
-            
-            return (
-              <React.Fragment key={index}>
-                {/* Line to next point */}
-                {index < priceData.length - 1 && (
-                  <View
-                    style={[
-                      styles.chartLine,
-                      {
-                        left: x,
-                        bottom: y,
-                        width: pointSpacing,
-                        height: 2,
-                        backgroundColor: COLORS.primary,
-                      }
-                    ]}
-                  />
-                )}
-                
-                {/* Data point */}
-                <View
-                  style={[
-                    styles.dataPoint,
-                    {
-                      left: x - 6,
-                      bottom: y - 6,
-                      backgroundColor: isHighlighted ? COLORS.primary : COLORS.white,
-                      borderColor: COLORS.primary,
-                    }
-                  ]}
-                />
-                
-                {/* X-axis label */}
-                <Text
-                  style={[
-                    styles.xAxisLabel,
-                    { left: x - 20 }
-                  ]}
-                >
-                  {point.date}
-                </Text>
-              </React.Fragment>
-            );
-          })}
+
+    const dataCount = priceData.length;
+
+    // Each data point gets at least 65px of horizontal space
+    const PX_PER_POINT = 65;
+    const cardInnerWidth = SCREEN_WIDTH - 48 - 32; // card margin + padding
+    // Chart is either full card width or wider if many data points
+    const chartWidth = Math.max(cardInnerWidth, dataCount * PX_PER_POINT);
+    const isScrollable = chartWidth > cardInnerWidth;
+
+    // Show all labels — horizontal scroll provides enough room
+    // Format labels shorter if there are many points
+    const labels = priceData.map(d => {
+      // Shorten label: "22 MAR" → "22 Mar"
+      const parts = d.date.split(' ');
+      if (parts.length === 2) {
+        return `${parts[0]} ${parts[1].charAt(0)}${parts[1].slice(1).toLowerCase()}`;
+      }
+      return d.date;
+    });
+
+    const chartComponent = (
+      <LineChart
+        data={{
+          labels: labels,
+          datasets: [
+            {
+              data: priceData.map(d => d.price),
+              strokeWidth: 2.5,
+            },
+          ],
+        }}
+        width={chartWidth}
+        height={220}
+        yAxisLabel="₹"
+        yAxisSuffix=""
+        yAxisInterval={1}
+        withInnerLines={true}
+        withOuterLines={false}
+        withVerticalLabels={true}
+        withHorizontalLabels={true}
+        withDots={true}
+        withShadow={false}
+        fromZero={false}
+        segments={4}
+        chartConfig={{
+          backgroundColor: '#FFFFFF',
+          backgroundGradientFrom: '#FFFFFF',
+          backgroundGradientTo: '#FFFFFF',
+          color: (opacity = 1) => `rgba(45, 106, 79, ${opacity})`,
+          labelColor: (opacity = 1) => `rgba(82, 96, 102, ${opacity})`,
+          propsForDots: {
+            r: '4',
+            strokeWidth: '2',
+            stroke: '#2D6A4F',
+            fill: '#FFFFFF',
+          },
+          propsForBackgroundLines: {
+            strokeDasharray: '5 5',
+            stroke: 'rgba(0,0,0,0.06)',
+            strokeWidth: 1,
+          },
+          propsForLabels: {
+            fontSize: 9,
+            fontWeight: '500',
+          },
+          fillShadowGradient: '#2D6A4F',
+          fillShadowGradientOpacity: 0.12,
+          fillShadowGradientFrom: '#2D6A4F',
+          fillShadowGradientTo: '#FFFFFF',
+        }}
+        bezier
+        style={styles.chartStyle}
+      />
+    );
+
+    if (isScrollable) {
+      return (
+        <View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={true}
+            contentContainerStyle={styles.chartScrollContent}
+            style={styles.chartScrollView}>
+            {chartComponent}
+          </ScrollView>
+          <View style={styles.scrollHint}>
+            <Icon name="gesture-swipe-horizontal" size={14} color={COLORS.textLight} />
+            <Text style={styles.scrollHintText}>Swipe to see more</Text>
+          </View>
         </View>
-      </View>
+      );
+    }
+
+    return <View style={styles.chartWrapper}>{chartComponent}</View>;
+  };
+
+  // Bottom sheet modal for selections
+  const renderSelectionModal = (
+    visible: boolean,
+    onClose: () => void,
+    title: string,
+    options: readonly string[] | string[],
+    selectedValue: string,
+    onSelect: (value: string) => void,
+  ) => {
+    return (
+      <Modal
+        visible={visible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={onClose}>
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={onClose}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHandle} />
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select {title}</Text>
+              <TouchableOpacity onPress={onClose} style={styles.modalCloseBtn}>
+                <Icon name="close" size={22} color={COLORS.textDark} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView
+              style={styles.modalList}
+              showsVerticalScrollIndicator={false}>
+              {[...options].map(option => {
+                const isSelected = option === selectedValue;
+                return (
+                  <TouchableOpacity
+                    key={option}
+                    style={[
+                      styles.modalOption,
+                      isSelected && styles.modalOptionSelected,
+                    ]}
+                    onPress={() => {
+                      onSelect(option);
+                      onClose();
+                    }}>
+                    <Text
+                      style={[
+                        styles.modalOptionText,
+                        isSelected && styles.modalOptionTextSelected,
+                      ]}>
+                      {option}
+                    </Text>
+                    {isSelected && (
+                      <Icon
+                        name="check-circle"
+                        size={20}
+                        color={COLORS.primary}
+                      />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+              <View style={{height: 30}} />
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     );
   };
 
-  const renderModal = useCallback((visible: boolean, onClose: () => void, title: string, options: string[], onSelect: (value: string) => void) => {
-    console.log('renderModal called:', { visible, title, optionsLength: options.length });
-    return (
-    <Modal
-      visible={visible}
-      transparent={true}
-      animationType="slide"
-      onRequestClose={onClose}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Select {title}</Text>
-            <TouchableOpacity onPress={onClose}>
-              <Icon name="close" size={24} color={COLORS.textDark} />
-            </TouchableOpacity>
-          </View>
-          <ScrollView style={styles.modalList}>
-            {options.map((option) => (
-              <TouchableOpacity
-                key={option}
-                style={styles.modalOption}
-                onPress={() => {
-                  console.log('Option selected:', option);
-                  onSelect(option);
-                  onClose();
-                }}
-              >
-                <Text style={styles.modalOptionText}>{option}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-      </View>
-    </Modal>
+  // Loading state
+  const renderLoading = () => (
+    <View style={styles.stateContainer}>
+      <ActivityIndicator size="large" color={COLORS.primary} />
+      <Text style={styles.stateText}>Loading price data...</Text>
+    </View>
   );
-}, []);
+
+  // Empty state
+  const renderEmpty = () => (
+    <View style={styles.stateContainer}>
+      <Icon name="chart-line" size={48} color={COLORS.textLight} />
+      <Text style={styles.stateTitle}>No Data Available</Text>
+      <Text style={styles.stateText}>
+        No market data available for {selectedCrop} in {selectedMandi},{' '}
+        {selectedState}.
+      </Text>
+      <Text style={styles.stateHint}>
+        Try selecting a different crop, state, or mandi.
+      </Text>
+    </View>
+  );
+
+  // Error state
+  const renderError = () => (
+    <View style={styles.stateContainer}>
+      <Icon name="alert-circle-outline" size={48} color="#F44336" />
+      <Text style={styles.stateTitle}>Something went wrong</Text>
+      <Text style={styles.stateText}>{errorMessage}</Text>
+      <TouchableOpacity
+        style={styles.retryButton}
+        onPress={() => {
+          // Force re-fetch by toggling a dummy state
+          setFetchState('idle');
+          setSelectedTimeRange(prev => prev);
+        }}>
+        <Icon name="refresh" size={18} color={COLORS.white} />
+        <Text style={styles.retryText}>Retry</Text>
+      </TouchableOpacity>
+    </View>
+  );
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Icon name="chevron-left" size={24} color={COLORS.textDark} />
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}>
+            <Icon name="chevron-left" size={28} color={COLORS.textDark} />
           </TouchableOpacity>
           <View style={styles.headerText}>
             <Text style={styles.pageTitle}>Price History</Text>
-            <Text style={styles.subtitle}>{selectedCrop} - {selectedMandi} Mandi</Text>
+            <Text style={styles.subtitle}>
+              {selectedCrop} - {selectedMandi} Mandi
+            </Text>
           </View>
+          <View style={{width: 28}} />
         </View>
 
         {/* Filter Chips */}
-        <View style={styles.chipsContainer}>
-          <TouchableOpacity 
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.chipsScroll}
+          contentContainerStyle={styles.chipsContainer}>
+          <TouchableOpacity
             style={styles.chip}
-            onPress={() => {
-              console.log('Crop modal pressed');
-              setShowCropModal(true);
-            }}
-          >
+            activeOpacity={0.7}
+            onPress={() => setShowCropModal(true)}>
+            <Icon
+              name="sprout"
+              size={14}
+              color={COLORS.primary}
+              style={styles.chipIcon}
+            />
             <Text style={styles.chipText}>Crop: {selectedCrop}</Text>
-            <Icon name="chevron-down" size={12} color={COLORS.primary} />
+            <Icon name="chevron-down" size={16} color={COLORS.primary} />
           </TouchableOpacity>
-          <TouchableOpacity 
+
+          <TouchableOpacity
             style={styles.chip}
-            onPress={() => {
-              console.log('State modal pressed');
-              setShowStateModal(true);
-            }}
-          >
+            activeOpacity={0.7}
+            onPress={() => setShowStateModal(true)}>
+            <Icon
+              name="map-marker"
+              size={14}
+              color={COLORS.primary}
+              style={styles.chipIcon}
+            />
             <Text style={styles.chipText}>State: {selectedState}</Text>
-            <Icon name="chevron-down" size={12} color={COLORS.primary} />
+            <Icon name="chevron-down" size={16} color={COLORS.primary} />
           </TouchableOpacity>
-          <TouchableOpacity 
+
+          <TouchableOpacity
             style={styles.chip}
-            onPress={() => {
-              console.log('Mandi modal pressed');
-              setShowMandiModal(true);
-            }}
-          >
+            activeOpacity={0.7}
+            onPress={() => setShowMandiModal(true)}>
+            <Icon
+              name="store"
+              size={14}
+              color={COLORS.primary}
+              style={styles.chipIcon}
+            />
             <Text style={styles.chipText}>Mandi: {selectedMandi}</Text>
-            <Icon name="chevron-down" size={12} color={COLORS.primary} />
+            <Icon name="chevron-down" size={16} color={COLORS.primary} />
           </TouchableOpacity>
-        </View>
+        </ScrollView>
 
         {/* Time Range Selector */}
         <View style={styles.timeRangeContainer}>
-          {timeRanges.map((range) => (
+          {timeRanges.map(range => (
             <TouchableOpacity
               key={range}
               style={[
                 styles.timeRangeButton,
                 selectedTimeRange === range && styles.selectedTimeRange,
               ]}
-              onPress={() => setSelectedTimeRange(range)}
-            >
+              onPress={() => setSelectedTimeRange(range)}>
               <Text
                 style={[
                   styles.timeRangeText,
                   selectedTimeRange === range && styles.selectedTimeRangeText,
-                ]}
-              >
+                ]}>
                 {range}
               </Text>
             </TouchableOpacity>
@@ -295,62 +467,119 @@ const PriceHistory: React.FC<{ navigation: any }> = ({ navigation }) => {
         <View style={styles.chartCard}>
           <View style={styles.chartHeader}>
             <Text style={styles.chartTitle}>PRICE TREND (₹/QUINTAL)</Text>
-            <View style={styles.trendBadge}>
-              <Text style={styles.trendText}>+4.2% this month</Text>
-            </View>
+            {fetchState === 'success' && (
+              <View
+                style={[
+                  styles.trendBadge,
+                  !isTrendPositive && styles.trendBadgeNegative,
+                ]}>
+                <Icon
+                  name={isTrendPositive ? 'trending-up' : 'trending-down'}
+                  size={12}
+                  color={isTrendPositive ? COLORS.success : '#F44336'}
+                  style={{marginRight: 4}}
+                />
+                <Text
+                  style={[
+                    styles.trendText,
+                    !isTrendPositive && styles.trendTextNegative,
+                  ]}>
+                  {trendPercent} this period
+                </Text>
+              </View>
+            )}
           </View>
-          
-          {loading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={COLORS.primary} />
-            </View>
-          ) : (
-            renderSimpleChart()
-          )}
+
+          {fetchState === 'loading' && renderLoading()}
+          {fetchState === 'error' && renderError()}
+          {fetchState === 'empty' && renderEmpty()}
+          {fetchState === 'success' && renderChart()}
         </View>
 
         {/* Statistics Cards */}
-        <View style={styles.statsContainer}>
-          <View style={styles.statCard}>
-            <Text style={styles.statTitle}>Highest Price</Text>
-            <Text style={styles.highestPrice}>
-              ₹{priceData.length > 0 ? Math.max(...priceData.map(d => d.price)).toLocaleString('en-IN') : '0'}
+        {fetchState === 'success' && (
+          <View style={styles.statsContainer}>
+            <View style={[styles.statCard, styles.statCardHigh]}>
+              <View style={styles.statIconRow}>
+                <Icon name="arrow-up-bold" size={18} color={COLORS.success} />
+                <Text style={styles.statTitle}>Highest Price</Text>
+              </View>
+              <Text style={styles.highestPrice}>
+                ₹{highestPrice.toLocaleString('en-IN')}
+              </Text>
+              <Text style={styles.statUnit}>/quintal</Text>
+            </View>
+            <View style={[styles.statCard, styles.statCardLow]}>
+              <View style={styles.statIconRow}>
+                <Icon name="arrow-down-bold" size={18} color="#F44336" />
+                <Text style={styles.statTitle}>Lowest Price</Text>
+              </View>
+              <Text style={styles.lowestPrice}>
+                ₹{lowestPrice.toLocaleString('en-IN')}
+              </Text>
+              <Text style={styles.statUnit}>/quintal</Text>
+            </View>
+          </View>
+        )}
+
+        {/* Average Price Card */}
+        {fetchState === 'success' && (
+          <View style={styles.avgCard}>
+            <View style={styles.avgRow}>
+              <Icon name="chart-bar" size={18} color={COLORS.primary} />
+              <Text style={styles.avgLabel}>Average Price</Text>
+            </View>
+            <Text style={styles.avgPrice}>
+              ₹{avgPrice.toLocaleString('en-IN')}/quintal
             </Text>
           </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statTitle}>Lowest Price</Text>
-            <Text style={styles.lowestPrice}>
-              ₹{priceData.length > 0 ? Math.min(...priceData.map(d => d.price)).toLocaleString('en-IN') : '0'}
-            </Text>
-          </View>
-        </View>
+        )}
 
         {/* Market Insight */}
-        <View style={styles.insightCard}>
-          <View style={styles.insightHeader}>
-            <Icon name="chart-pie" size={20} color={COLORS.primary} />
-            <Text style={styles.insightTitle}>Market Insight</Text>
+        {fetchState === 'success' && (
+          <View style={styles.insightCard}>
+            <View style={styles.insightHeader}>
+              <Icon name="lightbulb-on" size={20} color={COLORS.primary} />
+              <Text style={styles.insightTitle}>Market Insight</Text>
+            </View>
+            <Text style={styles.insightText}>{marketInsight}</Text>
+            <Icon
+              name="chart-areaspline"
+              size={60}
+              color={COLORS.primary}
+              style={styles.backgroundIcon}
+            />
           </View>
-          <Text style={styles.insightText}>
-            Prices are trending upwards due to increased demand in neighboring states. 
-            Expected to stay stable this week.
-          </Text>
-          <Icon name="information" size={60} color={COLORS.primary} style={styles.backgroundIcon} />
-        </View>
+        )}
 
-        {/* Bottom CTA Button */}
-        <TouchableOpacity style={styles.ctaButton}>
-          <Icon name="bell-outline" size={20} color={COLORS.white} />
-          <Text style={styles.ctaText}>Set Price Alert</Text>
-        </TouchableOpacity>
 
       </ScrollView>
 
-      {/* Modals */}
-      {renderModal(showCropModal, () => setShowCropModal(false), 'Crop', mutableCropOptions, handleCropSelect)}
-      {renderModal(showStateModal, () => setShowStateModal(false), 'State', mutableStateOptions, handleStateSelect)}
-      {renderModal(showMandiModal, () => setShowMandiModal(false), 'Mandi', getCurrentMandiOptions(), handleMandiSelect)}
-
+      {/* Selection Modals — rendered OUTSIDE useCallback so they always get fresh state */}
+      {renderSelectionModal(
+        showCropModal,
+        () => setShowCropModal(false),
+        'Crop',
+        cropOptions,
+        selectedCrop,
+        value => setSelectedCrop(value),
+      )}
+      {renderSelectionModal(
+        showStateModal,
+        () => setShowStateModal(false),
+        'State',
+        stateOptions,
+        selectedState,
+        value => setSelectedState(value as StateName),
+      )}
+      {renderSelectionModal(
+        showMandiModal,
+        () => setShowMandiModal(false),
+        'Mandi',
+        currentMandiOptions,
+        selectedMandi,
+        value => setSelectedMandi(value),
+      )}
     </SafeAreaView>
   );
 };
@@ -363,11 +592,12 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 100,
   },
+  // ── Header ──
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 14,
     backgroundColor: COLORS.white,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
@@ -380,35 +610,46 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   pageTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 19,
+    fontWeight: '700',
     color: COLORS.textDark,
+    letterSpacing: 0.3,
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 13,
     color: COLORS.textGray,
     marginTop: 2,
+  },
+  // ── Filter Chips ──
+  chipsScroll: {
+    flexGrow: 0,
   },
   chipsContainer: {
     flexDirection: 'row',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    gap: 8,
+    gap: 10,
   },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#E8F5E8',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 16,
-    gap: 4,
+    backgroundColor: '#E8F5E9',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 20,
+    gap: 5,
+    borderWidth: 1,
+    borderColor: '#C8E6C9',
+  },
+  chipIcon: {
+    marginRight: 2,
   },
   chipText: {
-    fontSize: 14,
+    fontSize: 13,
     color: COLORS.primary,
-    fontWeight: '500',
+    fontWeight: '600',
   },
+  // ── Time Range ──
   timeRangeContainer: {
     flexDirection: 'row',
     paddingHorizontal: 16,
@@ -417,100 +658,143 @@ const styles = StyleSheet.create({
   },
   timeRangeButton: {
     flex: 1,
-    paddingVertical: 8,
+    paddingVertical: 10,
     paddingHorizontal: 12,
     backgroundColor: '#F5F5F5',
-    borderRadius: 18,
+    borderRadius: 20,
     alignItems: 'center',
   },
   selectedTimeRange: {
     backgroundColor: COLORS.primary,
+    shadowColor: COLORS.primary,
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   },
   timeRangeText: {
     fontSize: 14,
     color: COLORS.textDark,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   selectedTimeRangeText: {
     color: COLORS.white,
   },
+  // ── Chart Card ──
   chartCard: {
     backgroundColor: COLORS.white,
     marginHorizontal: 16,
-    marginVertical: 16,
+    marginVertical: 12,
     borderRadius: 16,
     padding: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.08,
-    shadowRadius: 8,
+    shadowRadius: 10,
     elevation: 4,
   },
   chartHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 8,
   },
   chartTitle: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '700',
     color: COLORS.textGray,
-    letterSpacing: 0.5,
+    letterSpacing: 1,
   },
   trendBadge: {
-    backgroundColor: '#E8F5E8',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E8F5E9',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 14,
+  },
+  trendBadgeNegative: {
+    backgroundColor: '#FFEBEE',
   },
   trendText: {
-    fontSize: 12,
+    fontSize: 11,
     color: COLORS.success,
-    fontWeight: '500',
+    fontWeight: '600',
   },
-  loadingContainer: {
-    height: 160,
+  trendTextNegative: {
+    color: '#F44336',
+  },
+  // ── Chart ──
+  chartWrapper: {
+    alignItems: 'center',
+    marginTop: 8,
+    overflow: 'visible' as const,
+  },
+  chartScrollView: {
+    marginTop: 8,
+  },
+  chartScrollContent: {
+    paddingRight: 16,
+  },
+  chartStyle: {
+    borderRadius: 12,
+    marginLeft: -8,
+  },
+  scrollHint: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    gap: 4,
+    paddingTop: 6,
+    paddingBottom: 2,
+  },
+  scrollHintText: {
+    fontSize: 11,
+    color: COLORS.textLight,
+    fontWeight: '400' as const,
+  },
+  // ── Loading / Empty / Error ──
+  stateContainer: {
+    height: 200,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 24,
   },
-  chartContainer: {
-    height: 160,
-    position: 'relative',
-    marginVertical: 8,
+  stateTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.textDark,
+    marginTop: 12,
   },
-  gridLine: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: 'rgba(0,0,0,0.05)',
-  },
-  chartLineContainer: {
-    position: 'relative',
-    height: 140,
-  },
-  chartLine: {
-    position: 'absolute',
-    height: 2,
-    backgroundColor: COLORS.primary,
-    transformOrigin: 'left center',
-  },
-  dataPoint: {
-    position: 'absolute',
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    borderWidth: 2,
-  },
-  xAxisLabel: {
-    position: 'absolute',
-    bottom: -20,
-    fontSize: 10,
+  stateText: {
+    fontSize: 13,
     color: COLORS.textGray,
-    width: 40,
     textAlign: 'center',
+    marginTop: 8,
+    lineHeight: 18,
   },
+  stateHint: {
+    fontSize: 12,
+    color: COLORS.textLight,
+    textAlign: 'center',
+    marginTop: 6,
+  },
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    marginTop: 16,
+    gap: 6,
+  },
+  retryText: {
+    color: COLORS.white,
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  // ── Stats ──
   statsContainer: {
     flexDirection: 'row',
     paddingHorizontal: 16,
@@ -519,120 +803,180 @@ const styles = StyleSheet.create({
   statCard: {
     flex: 1,
     backgroundColor: COLORS.white,
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: {width: 0, height: 1},
     shadowOpacity: 0.06,
-    shadowRadius: 4,
+    shadowRadius: 6,
     elevation: 2,
+  },
+  statCardHigh: {
+    borderLeftWidth: 3,
+    borderLeftColor: COLORS.success,
+  },
+  statCardLow: {
+    borderLeftWidth: 3,
+    borderLeftColor: '#F44336',
+  },
+  statIconRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 8,
   },
   statTitle: {
     fontSize: 12,
     color: COLORS.textGray,
-    marginBottom: 8,
+    fontWeight: '500',
   },
   highestPrice: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 'bold',
     color: COLORS.success,
   },
   lowestPrice: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 'bold',
     color: '#F44336',
   },
+  statUnit: {
+    fontSize: 11,
+    color: COLORS.textLight,
+    marginTop: 2,
+  },
+  // ── Average Card ──
+  avgCard: {
+    backgroundColor: COLORS.white,
+    marginHorizontal: 16,
+    marginTop: 12,
+    borderRadius: 14,
+    padding: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 1},
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  avgRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  avgLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.textGray,
+  },
+  avgPrice: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+  // ── Insight ──
   insightCard: {
     backgroundColor: '#F1F8E9',
     marginHorizontal: 16,
     marginVertical: 16,
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 16,
     borderWidth: 1,
     borderColor: '#DCEDC8',
     position: 'relative',
+    overflow: 'hidden',
   },
   insightHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 8,
+    marginBottom: 10,
   },
   insightTitle: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: 'bold',
     color: COLORS.primary,
   },
   insightText: {
-    fontSize: 12,
+    fontSize: 13,
     color: COLORS.textDark,
-    lineHeight: 18,
+    lineHeight: 20,
+    paddingRight: 40,
   },
   backgroundIcon: {
     position: 'absolute',
-    right: 16,
-    bottom: 8,
-    opacity: 0.1,
+    right: 10,
+    bottom: 6,
+    opacity: 0.07,
   },
-  ctaButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.primary,
-    marginHorizontal: 16,
-    marginVertical: 16,
-    paddingVertical: 16,
-    borderRadius: 12,
-    gap: 8,
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  ctaText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: COLORS.white,
-  },
-  // Modal styles
+
+  // ── Modal ──
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.45)',
     justifyContent: 'flex-end',
   },
   modalContent: {
     backgroundColor: COLORS.white,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '80%',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '70%',
+    paddingBottom: 20,
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#DDD',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginTop: 12,
+    marginBottom: 4,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '700',
     color: COLORS.textDark,
+  },
+  modalCloseBtn: {
+    padding: 4,
   },
   modalList: {
-    flex: 1,
-    paddingHorizontal: 8,
+    paddingHorizontal: 12,
   },
   modalOption: {
-    padding: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 12,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: '#F5F5F5',
+    borderRadius: 8,
     minHeight: 50,
   },
+  modalOptionSelected: {
+    backgroundColor: '#E8F5E9',
+    borderBottomColor: '#E8F5E9',
+  },
   modalOptionText: {
-    fontSize: 16,
+    fontSize: 15,
     color: COLORS.textDark,
+    fontWeight: '400',
+  },
+  modalOptionTextSelected: {
+    color: COLORS.primary,
+    fontWeight: '600',
   },
 });
 
