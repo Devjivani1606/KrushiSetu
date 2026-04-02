@@ -15,7 +15,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { COLORS } from '../theme/colors';
 
 // ✅ Put your laptop IP here (same as ifconfig inet)
-const CONFIG = { API_BASE_URL: 'http://192.168.137.55:8000' };
+const CONFIG = { API_BASE_URL: 'http://10.179.107.150:8000' };
 
 type Top3Item = { crop: string; confidence: number | null };
 

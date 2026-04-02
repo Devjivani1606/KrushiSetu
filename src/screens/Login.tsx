@@ -32,7 +32,7 @@ const Login: React.FC<{ navigation: any }> = ({ navigation }) => {
 
       //const response = await fetch('http://10.64.34.162:5000/api/auth/login', {
 
-      const response = await fetch('http://192.168.26.20:5000/api/auth/login', {
+      const response = await fetch('http://10.179.107.150:5000/api/auth/login', {
 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

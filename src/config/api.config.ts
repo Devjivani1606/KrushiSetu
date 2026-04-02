@@ -8,6 +8,6 @@ export const API_CONFIG = {
   // BASE_URL: 'http://localhost:5000/api', // iOS simulator
 
   // BASE_URL: 'http://10.64.34.162:5000/api', // Physical device (replace with your IP)
-  BASE_URL: 'http://192.168.26.20:5000/api', // Physical device (replace with your IP)
+  BASE_URL: 'http://10.179.107.150:5000/api', // Physical device (replace with your IP)
 
 };
